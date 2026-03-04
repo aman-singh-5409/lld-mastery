@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { patterns, getPatternBySlug } from '@/data/patterns';
 import CodeBlock from '@/components/CodeBlock';
+import DecisionGuide from '@/components/DecisionGuide';
 import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Code2 } from 'lucide-react';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/lib/site-config';
@@ -206,6 +207,9 @@ export default async function PatternDetailPage({ params }: PageProps) {
               </div>
             </div>
           </section>
+
+          {/* Decision Guide */}
+          <DecisionGuide guide={pattern.decisionGuide} categoryColor={config} />
         </div>
 
         {/* Sidebar */}

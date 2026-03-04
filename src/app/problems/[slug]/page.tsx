@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { problems, getProblemBySlug } from '@/data/problems';
 import CodeBlock from '@/components/CodeBlock';
+import DiagramViewer from '@/components/DiagramViewer';
 import ProgressTracker from '@/components/ProgressTracker';
 import { ArrowLeft, BookOpen, Code2, GitBranch, Layers, Tag, CheckCircle2 } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -173,20 +173,11 @@ export default async function ProblemDetailPage({ params }: PageProps) {
                 <h2 className="text-xl font-semibold text-white">UML Class Diagram</h2>
               </div>
               <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                <div className="relative w-full">
-                  <Image
-                    src={`/diagrams/${problem.diagramFile}`}
-                    alt={`${problem.title} class diagram`}
-                    width={900}
-                    height={600}
-                    className="w-full rounded-lg object-contain"
-                    style={{ maxHeight: '500px', objectFit: 'contain' }}
-                    priority
-                  />
-                </div>
-                <p className="mt-2 text-center text-xs text-zinc-500">
-                  UML Class Diagram for {problem.title}
-                </p>
+                <DiagramViewer
+                  src={`/diagrams/${problem.diagramFile}`}
+                  alt={`${problem.title} class diagram`}
+                  caption={`UML Class Diagram for ${problem.title}`}
+                />
               </div>
             </section>
           )}

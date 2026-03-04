@@ -1,3 +1,18 @@
+export interface AlternativePattern {
+  slug: string;
+  name: string;
+  reason: string;
+}
+
+export interface PatternDecisionGuide {
+  goodFitSignals: string[];
+  useWhen: string[];
+  avoidWhen: string[];
+  complexity: 'Low' | 'Medium' | 'High';
+  alternatives: AlternativePattern[];
+  bottomLine: string;
+}
+
 export interface MultiLangCode {
   python: string;
   java: string;
@@ -16,6 +31,7 @@ export interface Pattern {
   pros: string[];
   cons: string[];
   code: MultiLangCode;
+  decisionGuide: PatternDecisionGuide;
 }
 
 export const patterns: Pattern[] = [
@@ -235,6 +251,38 @@ const s2 = ThreadSafeSingleton.getInstance();
 console.log(s1 === s2);  // true
 const db = DatabaseConnection.getInstance("prod-db.example.com", 5432);
 console.log(db.query("SELECT * FROM users"));`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'I keep passing the same config/logger/cache object as a parameter everywhere just to share it',
+        'My app accidentally creates multiple database connection pools and they compete for resources',
+        'I need exactly one coordinator for a shared resource across the entire application lifetime',
+        'Multiple instantiations cause race conditions or inconsistent state in my app',
+      ],
+      useWhen: [
+        'Exactly one instance of a class must exist for the lifetime of the application',
+        'You control a shared resource like a thread pool, connection pool, or device driver',
+        'Global access to the instance is required but multiple instances would break the system',
+      ],
+      avoidWhen: [
+        'You can pass the shared object via constructor injection — Singleton is global state in disguise',
+        'You need to unit test the class in isolation, since Singleton leaks state between tests',
+        'You run in a multi-process or serverless environment where \'one instance\' has no meaning',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'factory',
+          name: 'Factory Method',
+          reason: 'Use Factory when you need controlled creation without enforcing a single instance',
+        },
+        {
+          slug: 'prototype',
+          name: 'Prototype',
+          reason: 'Use Prototype when you need one shared template but multiple independent copies',
+        },
+      ],
+      bottomLine: 'Reach for Singleton only when the identity constraint is a hard requirement — if a DI container can inject the same instance everywhere, prefer that instead.',
     },
   },
   {
@@ -489,6 +537,38 @@ console.log(creator.notify("user@example.com", "Hello!"));
 const sms = SimpleNotificationFactory.create("SMS");
 console.log(sms.send("+1234567890", "Verification code: 1234"));`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'I have a growing if/else or switch block that picks which class to instantiate based on a type string',
+        'The exact class to create is determined at runtime by user input or configuration',
+        'I want to decouple the code that uses an object from the code that creates it',
+        'Adding a new product type requires changes in many places across the codebase',
+      ],
+      useWhen: [
+        'You don\'t know ahead of time which class you need to instantiate',
+        'You want subclasses to control which concrete product gets created',
+        'You need to centralise and standardise object creation across your codebase',
+      ],
+      avoidWhen: [
+        'You only have one concrete product type — the added indirection is pure overhead',
+        'The creation logic is trivial enough that a simple constructor call is clearer',
+        'You need to create families of related objects that must match — use Abstract Factory instead',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'abstract-factory',
+          name: 'Abstract Factory',
+          reason: 'Use Abstract Factory when products come in families that must be compatible with each other',
+        },
+        {
+          slug: 'builder',
+          name: 'Builder',
+          reason: 'Use Builder when construction has many optional steps or requires a specific sequence',
+        },
+      ],
+      bottomLine: 'If you are writing \'new XxxThing()\' inside a switch statement, move that logic into a Factory Method.',
+    },
   },
   {
     id: 'abstract-factory',
@@ -702,6 +782,38 @@ class Application {
 const factory: GUIFactory = process.platform === 'win32' ? new WindowsFactory() : new MacFactory();
 const app = new Application(factory);
 app.render();`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'My app must work with multiple families of related products (e.g., Windows vs Mac UI widgets) and they must always match',
+        'I change entire product suites at once, not individual products',
+        'Mixing products from different families causes visual or logical inconsistencies',
+        'I\'m adding platform support and need to ensure all components come from the same platform',
+      ],
+      useWhen: [
+        'Your system must be independent of how its products are created, composed, and represented',
+        'You need to enforce that products from the same family are always used together',
+        'You want to swap entire product families at runtime or via configuration',
+      ],
+      avoidWhen: [
+        'You only have one product family — a simple Factory Method is sufficient',
+        'Products in a family rarely need to co-exist — individual factories per product are simpler',
+        'Adding a new product type requires changes across all factory implementations — reconsider the design',
+      ],
+      complexity: 'High',
+      alternatives: [
+        {
+          slug: 'factory',
+          name: 'Factory Method',
+          reason: 'Use Factory Method when products don\'t come in families and are independent of each other',
+        },
+        {
+          slug: 'builder',
+          name: 'Builder',
+          reason: 'Use Builder when object construction is complex and stepwise, not when compatibility between products matters',
+        },
+      ],
+      bottomLine: 'Use Abstract Factory when swapping one product must also swap all related products — if products can be mixed independently, individual Factory Methods are simpler.',
     },
   },
   {
@@ -936,6 +1048,38 @@ const request = HttpRequest.builder('https://api.example.com/users')
   .build();
 
 console.log(request.toString());`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'My constructor has more than 4 parameters, many of them optional, leading to confusing call sites',
+        'I see many overloaded constructors or a telescoping constructor anti-pattern in my class',
+        'Building the object requires a specific sequence of steps and some steps are conditional',
+        'The same construction process should produce different representations of an object',
+      ],
+      useWhen: [
+        'Object construction is complex and involves multiple optional parameters or configuration steps',
+        'You want to produce different representations using the same construction process',
+        'You need to enforce that all required fields are set before the object is usable',
+      ],
+      avoidWhen: [
+        'Your object has fewer than 3-4 parameters — a plain constructor or static factory is cleaner',
+        'Construction order does not matter and no validation between steps is needed',
+        'You do not need to reuse the same construction steps to create different products',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'factory',
+          name: 'Factory Method',
+          reason: 'Use Factory Method when construction is simple and the concern is which class to instantiate, not how',
+        },
+        {
+          slug: 'prototype',
+          name: 'Prototype',
+          reason: 'Use Prototype when you want a new object pre-configured from an existing one rather than building from scratch',
+        },
+      ],
+      bottomLine: 'If your constructor looks like new User(name, null, null, true, \'admin\', null), it is time for a Builder.',
     },
   },
   {
@@ -1174,6 +1318,38 @@ console.log(c1.draw());   // Circle(color=red, radius=5)
 console.log(c2.draw());   // Circle(color=green, radius=5)
 console.log(c1 === c2);   // false`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'Object initialisation is expensive (network, DB, computation) and I need many similar instances',
+        'I need copies of objects whose concrete class I don\'t know at compile time',
+        'I want to create objects dynamically based on user-configured templates at runtime',
+        'Deep copying complex object graphs manually is tedious and error-prone',
+      ],
+      useWhen: [
+        'Creating a new object is more expensive than copying an existing one',
+        'You need to instantiate classes that are only known at runtime',
+        'You want to reduce the number of subclasses and avoid a parallel class hierarchy',
+      ],
+      avoidWhen: [
+        'Objects have complex circular references that make deep copying ambiguous or dangerous',
+        'Construction is cheap — cloning adds complexity with no performance benefit',
+        'Cloned objects must be truly independent but the object graph contains shared mutable state',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'factory',
+          name: 'Factory Method',
+          reason: 'Use Factory Method when you need to create fresh objects with specific types, not copies of existing ones',
+        },
+        {
+          slug: 'builder',
+          name: 'Builder',
+          reason: 'Use Builder when you want to construct step-by-step rather than clone and tweak',
+        },
+      ],
+      bottomLine: 'Reach for Prototype when you want \'give me another one just like this\' semantics and copying is cheaper than constructing from scratch.',
+    },
   },
 
   // STRUCTURAL PATTERNS
@@ -1383,6 +1559,43 @@ class CheckoutService {
 const legacy = new LegacyGateway();
 new CheckoutService(new LegacyGatewayAdapter(legacy)).checkout(29.99);
 new CheckoutService(new ModernPaymentProcessor()).checkout(49.99);`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'I want to use an existing class but its interface does not match what my code expects',
+        'I am integrating a third-party library with an incompatible API into an existing system',
+        'I cannot modify the source class (legacy code, external dependency) but must interoperate with it',
+        'I want to reuse several incompatible subclasses by making them conform to a common interface',
+      ],
+      useWhen: [
+        'You want to use an existing class whose interface is incompatible with the rest of your code',
+        'You need to integrate third-party or legacy code without modifying it',
+        'You want to create a reusable class that cooperates with classes with incompatible interfaces',
+      ],
+      avoidWhen: [
+        'You own both interfaces and can change one — changing the source is simpler than wrapping it',
+        'The adaptation logic is so complex it warrants a full translation layer, not a thin wrapper',
+        'You are adapting behaviour, not just interface — consider Decorator or Strategy instead',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'bridge',
+          name: 'Bridge',
+          reason: 'Use Bridge when you design the abstraction and implementation from scratch to vary independently',
+        },
+        {
+          slug: 'decorator',
+          name: 'Decorator',
+          reason: 'Use Decorator when you want to add behaviour rather than just adapt an existing interface',
+        },
+        {
+          slug: 'facade',
+          name: 'Facade',
+          reason: 'Use Facade when you want to simplify a complex subsystem behind a new interface, not convert one interface to another',
+        },
+      ],
+      bottomLine: 'Adapter is the right tool when you have an incompatible third-party or legacy interface you cannot change — it translates, it does not add behaviour.',
     },
   },
   {
@@ -1630,6 +1843,38 @@ console.log(c2.draw());  // Raster: Drawing 100px circle at (0,0)
 c1.renderer = raster;
 console.log(c1.draw());  // Now uses raster`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'I notice my class hierarchy is exploding because I\'m combining two independent dimensions (e.g., Shape x Color)',
+        'I want to switch implementations at runtime without changing the abstraction',
+        'Extending the abstraction should not force me to change the implementation and vice versa',
+        'Platform-specific code is leaking into platform-agnostic abstractions',
+      ],
+      useWhen: [
+        'You want to avoid a permanent binding between abstraction and implementation',
+        'Both abstraction and implementation should be extensible via subclassing independently',
+        'You need to switch implementations at runtime',
+      ],
+      avoidWhen: [
+        'You only have one implementation — the indirection of Bridge adds complexity for no gain',
+        'The abstraction and implementation do not change independently — a single hierarchy is simpler',
+        'You are adapting an existing interface — use Adapter instead',
+      ],
+      complexity: 'High',
+      alternatives: [
+        {
+          slug: 'adapter',
+          name: 'Adapter',
+          reason: 'Use Adapter when bridging incompatible existing interfaces rather than designing for independence from the start',
+        },
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when only the algorithm/behaviour varies, not a full implementation hierarchy',
+        },
+      ],
+      bottomLine: 'If you find yourself creating a CartesianProduct of subclasses to cover two independent dimensions, Bridge collapses that explosion.',
+    },
   },
   {
     id: 'composite',
@@ -1852,6 +2097,37 @@ root.add(tests);
 root.add(new File('README.md', 2048));
 console.log(root.display());
 console.log(\`Total size: \${root.getSize()} bytes\`);`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'My data naturally forms a tree: files/folders, UI components, org charts, menus with sub-menus',
+        'Client code has to treat individual objects and groups of objects differently with ugly type checks',
+        'I want to apply an operation recursively to a whole tree without knowing its structure at compile time',
+      ],
+      useWhen: [
+        'You need to represent part-whole hierarchies of objects',
+        'Client code should treat individual objects and compositions of objects uniformly',
+        'The structure of the problem is recursive — nodes can contain other nodes',
+      ],
+      avoidWhen: [
+        'Your tree is very shallow and the uniformity benefit does not justify the abstraction',
+        'Leaf and composite objects have fundamentally different interfaces that should not be unified',
+        'Performance is critical and virtual dispatch overhead in a deep tree is unacceptable',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'decorator',
+          name: 'Decorator',
+          reason: 'Use Decorator when you want to add responsibilities to individual objects, not model tree structures',
+        },
+        {
+          slug: 'iterator',
+          name: 'Iterator',
+          reason: 'Use Iterator when the goal is to traverse the structure, not to operate on it uniformly',
+        },
+      ],
+      bottomLine: 'If your domain has recursive containment (a thing that contains more things of the same type), Composite is almost certainly the right fit.',
     },
   },
   {
@@ -2078,6 +2354,43 @@ console.log(bold.render());        // <b>Hello, World!</b>
 console.log(boldItalic.render());  // <i><b>Hello, World!</b></i>
 console.log(full.render());        // <u><span ...>...</span></u>`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'I need to add optional behaviours to objects at runtime rather than to an entire class',
+        'I have a combinatorial explosion of subclasses trying to cover all combinations of features',
+        'I want to add cross-cutting concerns (logging, validation, caching) transparently to existing objects',
+        'I cannot modify the base class but need to extend its functionality',
+      ],
+      useWhen: [
+        'You need to add responsibilities to individual objects dynamically without affecting other objects',
+        'Extending by subclassing is impractical because it leads to an explosion of subclasses',
+        'You want to add and remove behaviours at runtime independently',
+      ],
+      avoidWhen: [
+        'The order of wrapping matters in a way that is hard to reason about — consider a simpler pipeline',
+        'You only ever add one behaviour — a subclass or a simple wrapper class is clearer',
+        'Unwrapping or identifying the inner type at runtime is a frequent need — Decorator makes that awkward',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'composite',
+          name: 'Composite',
+          reason: 'Use Composite when you model part-whole trees rather than adding behaviour to individual objects',
+        },
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when you want to swap entire behaviours, not stack incremental additions',
+        },
+        {
+          slug: 'proxy',
+          name: 'Proxy',
+          reason: 'Use Proxy when access control, lazy initialisation, or remoting is the concern rather than feature stacking',
+        },
+      ],
+      bottomLine: 'Decorator shines when you want to stack independent behaviours like \'logged + cached + validated\' without a subclass for each combination.',
+    },
   },
   {
     id: 'facade',
@@ -2258,6 +2571,38 @@ class DeploymentFacade {
 
 const deployer = new DeploymentFacade();
 deployer.deploy('main', '2.1.0');`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'Clients need to orchestrate 5+ subsystem classes to accomplish one simple task',
+        'My subsystem has evolved into a tangled mess and I want to provide a clean entry point',
+        'I want to layer my system so that high-level code only depends on one interface, not many',
+        'Onboarding new developers is hard because the subsystem interaction is too complex',
+      ],
+      useWhen: [
+        'You want to provide a simple interface to a complex subsystem for common use cases',
+        'You want to layer your system with a well-defined entry point at each layer boundary',
+        'You want to decouple clients from a subsystem so that the subsystem can evolve independently',
+      ],
+      avoidWhen: [
+        'You need to expose the full power of the subsystem — a facade that exposes everything is no facade',
+        'The subsystem is already simple enough that clients can use it directly',
+        'You need to translate between interfaces — use Adapter instead of Facade',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'adapter',
+          name: 'Adapter',
+          reason: 'Use Adapter when the goal is interface compatibility, not simplification of a complex subsystem',
+        },
+        {
+          slug: 'mediator',
+          name: 'Mediator',
+          reason: 'Use Mediator when the complexity is mutual dependencies between many peers, not just subsystem exposure',
+        },
+      ],
+      bottomLine: 'Build a Facade when you want to say \'here is the happy path\' and hide the complexity of the subsystem behind a single, stable interface.',
     },
   },
   {
@@ -2466,6 +2811,37 @@ const glyphs = Array.from(text).map((c, i) => new CharacterGlyph(c, 'Arial', 12,
 console.log(\`Characters: \${glyphs.length}\`);
 console.log(\`Unique flyweights: \${FlyweightFactory.count()}\`);
 console.log(glyphs[0].render());`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'My application creates hundreds of thousands of similar objects and memory usage is becoming a problem',
+        'Many objects share the same intrinsic state that could be stored once and shared',
+        'Profiling shows object allocation is a memory and GC bottleneck in a tight rendering/game loop',
+      ],
+      useWhen: [
+        'Your application must support a huge number of fine-grained objects that share most of their state',
+        'Memory consumption is a measurable bottleneck caused by object proliferation',
+        'The shared (intrinsic) state can be cleanly separated from the variable (extrinsic) state',
+      ],
+      avoidWhen: [
+        'Memory is not a bottleneck — premature Flyweight optimisation adds accidental complexity',
+        'Objects have significant unique state that cannot be cleanly externalised',
+        'The added complexity of managing extrinsic state context outweighs the memory savings',
+      ],
+      complexity: 'High',
+      alternatives: [
+        {
+          slug: 'singleton',
+          name: 'Singleton',
+          reason: 'Use Singleton when you need exactly one instance, not a shared pool of instances keyed by state',
+        },
+        {
+          slug: 'prototype',
+          name: 'Prototype',
+          reason: 'Use Prototype when you need independent copies, not shared instances',
+        },
+      ],
+      bottomLine: 'Flyweight is a performance pattern — profile first and reach for it only when object proliferation is a proven memory bottleneck.',
     },
   },
   {
@@ -2701,6 +3077,43 @@ service.fetchData('SELECT * FROM users');
 service.fetchData('SELECT * FROM users');
 service.fetchData('SELECT * FROM orders');`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'I want to defer expensive object initialisation until the object is actually needed',
+        'I need to add access control checks before delegating to the real object',
+        'I want to cache results, log calls, or count references without modifying the real object',
+        'I need a local stand-in for a remote object or a large resource that should load lazily',
+      ],
+      useWhen: [
+        'You need lazy initialisation of a heavyweight object that is not always used',
+        'You need access control, logging, caching, or reference counting around an existing object',
+        'You need a local representative for a remote service or resource',
+      ],
+      avoidWhen: [
+        'The response-time overhead of an extra indirection layer is unacceptable in a hot path',
+        'You are adding new behaviour rather than controlling access — use Decorator instead',
+        'The wrapped object changes its interface frequently — proxy coupling becomes a maintenance burden',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'decorator',
+          name: 'Decorator',
+          reason: 'Use Decorator when you want to add new behaviour, not intercept access to an existing object',
+        },
+        {
+          slug: 'adapter',
+          name: 'Adapter',
+          reason: 'Use Adapter when the interface needs to change, not just the access mechanics',
+        },
+        {
+          slug: 'facade',
+          name: 'Facade',
+          reason: 'Use Facade when you want to simplify a complex subsystem rather than intercept a single object',
+        },
+      ],
+      bottomLine: 'Use Proxy when you want transparent interception (lazy load, access control, caching) around an object without the caller knowing.',
+    },
   },
 
   // BEHAVIORAL PATTERNS
@@ -2918,6 +3331,38 @@ fitness.register(new GoalNotifier(10000));
 fitness.updateStats(5000, 250.5, 3.5);
 console.log('---');
 fitness.updateStats(10500, 525.0, 7.3);`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'A change in one object requires updating an unknown number of other objects',
+        'I have tight coupling because objects poll each other for state changes',
+        'I want to implement a publish-subscribe or event bus mechanism',
+        'Different modules need to react to the same domain event without knowing about each other',
+      ],
+      useWhen: [
+        'When a change to one object requires changing an unknown number of other objects',
+        'Objects should be able to notify other objects without making assumptions about who those objects are',
+        'You need decoupled event-driven communication between components',
+      ],
+      avoidWhen: [
+        'The notification chain is deep and order-dependent — debugging cascading updates is extremely hard',
+        'You have only two tightly coupled objects — a direct method call is clearer',
+        'Memory leaks from forgotten subscriptions are a risk and lifecycle management is complex',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'mediator',
+          name: 'Mediator',
+          reason: 'Use Mediator when many objects must coordinate in complex ways, not just broadcast state changes',
+        },
+        {
+          slug: 'command',
+          name: 'Command',
+          reason: 'Use Command when you need undoable or queueable operations, not just notification',
+        },
+      ],
+      bottomLine: 'Observer is the right choice when you want one-to-many reactive updates and the publisher should not care who is listening.',
     },
   },
   {
@@ -3176,6 +3621,43 @@ svc.setStrategy(new WeightBasedShipping());
 svc.calculate(order);
 svc.setStrategy(new FreeShipping(500));
 svc.calculate(order);`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'I have a large if/else or switch block that selects between different algorithms at runtime',
+        'I want to swap a sorting, payment, or compression algorithm without changing the surrounding code',
+        'Different variants of an algorithm are implemented as subclasses just to override one method',
+        'Unit testing individual algorithms is difficult because they are buried inside a class',
+      ],
+      useWhen: [
+        'You need to swap algorithms or behaviours at runtime without altering the clients that use them',
+        'You want to isolate the implementation details of an algorithm from the code that uses it',
+        'A class defines multiple behaviours that appear as conditional statements — extract each branch',
+      ],
+      avoidWhen: [
+        'You only have one algorithm variant — the Strategy interface adds indirection for no benefit',
+        'The algorithms share so much code that extracting them creates more duplication than it removes',
+        'Clients never need to switch strategies — a simple method or template override is simpler',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'template-method',
+          name: 'Template Method',
+          reason: 'Use Template Method when the algorithm skeleton is fixed and only certain steps vary via inheritance',
+        },
+        {
+          slug: 'state',
+          name: 'State',
+          reason: 'Use State when the behaviour change is driven by the object\'s internal state transitions',
+        },
+        {
+          slug: 'command',
+          name: 'Command',
+          reason: 'Use Command when you need undoable, queueable operations rather than just swappable algorithms',
+        },
+      ],
+      bottomLine: 'Strategy is the object-oriented replacement for a switch/if-else block over algorithms — if you want runtime interchangeability of behaviour, this is it.',
     },
   },
   {
@@ -3450,6 +3932,38 @@ remote.execute(new LightOnCommand(kitchen));
 remote.undoLast();
 remote.execute(new MacroCommand([new LightOnCommand(livingRoom), new LightOnCommand(kitchen)]));`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'I need undo/redo functionality and want to store the history of operations',
+        'I want to queue, schedule, or execute operations at a later time',
+        'I need to support transactional behaviour where a sequence of actions can be rolled back',
+        'I have a menu/toolbar with items that trigger actions and want to decouple them from their handlers',
+      ],
+      useWhen: [
+        'You need to parameterise objects with operations and support undoable operations',
+        'You want to queue, log, or schedule operations for deferred execution',
+        'You need to implement transactional behaviour with rollback support',
+      ],
+      avoidWhen: [
+        'You do not need undo, queuing, or serialisation — a simple callback or function reference is lighter',
+        'The command hierarchy becomes very large and the pattern overhead outweighs the benefit',
+        'You only have a one-shot, non-undoable operation — just call the method directly',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when you need interchangeable algorithms without undo/queue semantics',
+        },
+        {
+          slug: 'memento',
+          name: 'Memento',
+          reason: 'Pair Memento with Command when undo needs to restore full object state, not just reverse an operation',
+        },
+      ],
+      bottomLine: 'Reach for Command when you need to treat an action as a first-class object — especially when undo, queuing, or audit logging is a requirement.',
+    },
   },
   {
     id: 'state',
@@ -3696,6 +4210,38 @@ console.log(order.ship());                    // Cannot ship - pending!
 console.log(order.process());                 // Processing
 console.log(order.ship());                    // Shipped!
 console.log(order.cancel());                  // Cannot cancel - shipped!`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'My class has a large switch/if-else based on an internal \'status\' or \'mode\' field',
+        'The same method behaves completely differently depending on what state the object is in',
+        'State transition logic is scattered across multiple methods making it hard to follow',
+        'Adding a new state requires touching many methods across the class',
+      ],
+      useWhen: [
+        'An object\'s behaviour depends on its state and it must change behaviour at runtime as state changes',
+        'You have operations with large conditional statements that depend on the object\'s state',
+        'State transitions are complex and state-specific behaviour needs to be encapsulated',
+      ],
+      avoidWhen: [
+        'You have only 2-3 states with minimal state-specific logic — a simple boolean or enum is clearer',
+        'State transitions never happen at runtime — the state is fixed at construction',
+        'The state machine is so simple that a lookup table or state chart library is more appropriate',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when behaviour varies by algorithm choice, not by an internal state machine with transitions',
+        },
+        {
+          slug: 'chain-of-responsibility',
+          name: 'Chain of Responsibility',
+          reason: 'Use Chain of Responsibility when a request should pass through a series of handlers, not when the same object changes mode',
+        },
+      ],
+      bottomLine: 'State Pattern is the right tool when your object acts like a finite state machine — replace the switch-on-state with polymorphic state objects.',
     },
   },
   {
@@ -3944,6 +4490,38 @@ class JSONProcessor extends DataProcessor {
 
 console.log('CSV Result:', new CSVProcessor().process('data.csv'));
 console.log('JSON Result:', new JSONProcessor().process('data.json'));`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'I have multiple classes with the same algorithm structure but different implementations of specific steps',
+        'I copy-paste boilerplate code between subclasses, changing only a few steps',
+        'I want to enforce an algorithm skeleton and let subclasses customise only the hooks',
+        'Cross-cutting concerns like setup and teardown should be controlled by the base class',
+      ],
+      useWhen: [
+        'Multiple classes share the same algorithm skeleton but differ in specific steps',
+        'You want to control which parts of an algorithm clients can override via hooks',
+        'You want to move common behaviour to a single base class to avoid code duplication',
+      ],
+      avoidWhen: [
+        'The algorithm skeleton itself varies — you need Strategy not Template Method',
+        'Inheritance is undesirable in your design (deep hierarchies are hard to navigate)',
+        'You need to change the algorithm at runtime — use Strategy (composition over inheritance)',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when the algorithm itself (not just its steps) must change at runtime via composition',
+        },
+        {
+          slug: 'bridge',
+          name: 'Bridge',
+          reason: 'Use Bridge when both the abstraction and implementation need to vary independently across two hierarchies',
+        },
+      ],
+      bottomLine: 'Template Method is the right choice when you want \'here is the fixed recipe, subclasses fill in the blanks\' — prefer Strategy if you need runtime flexibility.',
     },
   },
   {
@@ -4198,6 +4776,38 @@ console.log('In-order:', [...tree.inorder()]);    // [1,2,3,4,5,6,7]
 console.log('Pre-order:', [...tree.preorder()]);  // [4,2,1,3,6,5,7]
 console.log('Level-order:', tree.levelOrder());   // [4,2,6,1,3,5,7]`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'I need to traverse different collection types with the same client code',
+        'The collection internals (tree, graph, list) should not be exposed to the traversal consumer',
+        'I want multiple independent traversals of the same collection running concurrently',
+        'I want lazy or on-demand element generation rather than materialising the whole collection',
+      ],
+      useWhen: [
+        'You want to provide a standard way to traverse a collection without exposing its internals',
+        'You need to support multiple simultaneous traversals of the same collection',
+        'You want to abstract over diverse collection types with a uniform interface',
+      ],
+      avoidWhen: [
+        'Your collection is a simple array/list and a for-loop is perfectly readable',
+        'The traversal is always depth-first over a tree and a recursive visitor is clearer',
+        'You need to modify the collection during iteration — iterators and mutation are error-prone',
+      ],
+      complexity: 'Low',
+      alternatives: [
+        {
+          slug: 'composite',
+          name: 'Composite',
+          reason: 'Use Composite to model the tree structure; pair with Iterator to traverse it',
+        },
+        {
+          slug: 'visitor',
+          name: 'Visitor',
+          reason: 'Use Visitor when you want to apply operations across the structure, not just iterate elements',
+        },
+      ],
+      bottomLine: 'If you are writing adapter code to make two collections behave the same way in a for-loop, you are reinventing Iterator.',
+    },
   },
   {
     id: 'mediator',
@@ -4432,6 +5042,38 @@ const charlie = new User('Charlie', chat);
 alice.send('Hey everyone!');
 bob.send('Hi Alice!', 'Alice');
 charlie.send('Hello world!');`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'Many objects reference each other directly, making the dependency graph a tangled web',
+        'Reusing a component in isolation is impossible because it drags along half the object graph',
+        'Changing one object\'s collaboration protocol requires updating many other objects',
+        'A chat room, UI form, or workflow engine orchestrates complex interactions between many peers',
+      ],
+      useWhen: [
+        'A set of objects communicate in complex but well-defined ways causing tight coupling',
+        'Reusing an object is hard because it refers to and communicates with many other objects',
+        'You want to centralise complex coordinating logic so it does not spread across many classes',
+      ],
+      avoidWhen: [
+        'You only have two objects interacting — a direct reference or Observer is simpler',
+        'The mediator itself becomes a God Object that knows too much about all participants',
+        'The interaction pattern is a simple one-to-many notification — use Observer instead',
+      ],
+      complexity: 'High',
+      alternatives: [
+        {
+          slug: 'observer',
+          name: 'Observer',
+          reason: 'Use Observer for simple one-to-many event broadcast; Mediator is for many-to-many coordination logic',
+        },
+        {
+          slug: 'facade',
+          name: 'Facade',
+          reason: 'Use Facade to simplify client access to a subsystem; Mediator coordinates peers inside the subsystem',
+        },
+      ],
+      bottomLine: 'When the dependency graph between peers looks like spaghetti, centralise the coordination into a Mediator so every object only talks to it.',
     },
   },
   {
@@ -4706,6 +5348,38 @@ console.log(\`Current: '\${editor.getContent()}'\`);
 history.undo();
 history.undo();
 history.undo();`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'I need to implement undo/redo and want to save snapshots of object state without exposing internals',
+        'Users expect to save and restore checkpoints (game saves, document history, draft versions)',
+        'I need to rollback an object to a previous state after a failed transaction',
+        'The state I need to save is complex and should not be reconstructed by external code',
+      ],
+      useWhen: [
+        'You need to produce snapshots of an object\'s state to restore it later',
+        'Exposing the object\'s internal state for snapshot purposes would violate its encapsulation',
+        'You need undo/redo functionality where each step captures a snapshot',
+      ],
+      avoidWhen: [
+        'The state to capture is very large — storing many mementos will consume too much memory',
+        'Clients need to inspect the saved state — if you expose internals, you break encapsulation',
+        'State can be reconstructed by replaying a log of commands — Command + event sourcing may be better',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'command',
+          name: 'Command',
+          reason: 'Pair Command with Memento: Commands drive operations, Mementos capture state for undo',
+        },
+        {
+          slug: 'prototype',
+          name: 'Prototype',
+          reason: 'Use Prototype when a full deep clone is an acceptable snapshot mechanism',
+        },
+      ],
+      bottomLine: 'Memento lets you implement undo without breaking encapsulation — the originator saves and restores its own state through opaque snapshot objects.',
     },
   },
   {
@@ -4991,6 +5665,43 @@ auth.setNext(new RateLimitHandler(100)).setNext(new ValidationHandler()).setNext
 console.log(auth.handle({ user: 'alice', token: 'valid_token', rateLimitCount: 50, body: { action: 'buy' } }));
 console.log(auth.handle({ user: 'bob', token: null, rateLimitCount: 50, body: {} }));`,
     },
+    decisionGuide: {
+      goodFitSignals: [
+        'Multiple handlers may process a request and I don\'t know which one(s) at compile time',
+        'I want to decouple the sender of a request from its receivers',
+        'The set of handlers and their order needs to change dynamically at runtime',
+        'I have a pipeline of middleware, filters, or validators where each step decides to handle or pass on',
+      ],
+      useWhen: [
+        'More than one object may handle a request and the handler is not known a priori',
+        'You want to issue a request to one of several objects without specifying the receiver explicitly',
+        'The set of handlers should be configurable at runtime (e.g., middleware pipelines)',
+      ],
+      avoidWhen: [
+        'Every request must be handled — a chain can silently drop requests if no handler matches',
+        'The chain is always the same two handlers — a simple if/else is clearer',
+        'Performance is critical and chaining adds overhead that is not justified',
+      ],
+      complexity: 'Medium',
+      alternatives: [
+        {
+          slug: 'decorator',
+          name: 'Decorator',
+          reason: 'Use Decorator when every handler in the chain must always process the request (wrapping, not routing)',
+        },
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when exactly one handler processes the request and it is selected up front',
+        },
+        {
+          slug: 'command',
+          name: 'Command',
+          reason: 'Use Command when you need undoable, queueable actions, not a request routing pipeline',
+        },
+      ],
+      bottomLine: 'Chain of Responsibility is the pattern for middleware, interceptor, and filter pipelines — use it when a request should flow through a configurable sequence of handlers.',
+    },
   },
   {
     id: 'visitor',
@@ -5247,6 +5958,43 @@ const perim = new PerimeterCalculator();
 shapes.forEach(shape => {
   console.log(\`\${shape.constructor.name}: area=\${shape.accept(area).toFixed(2)}, perimeter=\${shape.accept(perim).toFixed(2)}\`);
 });`,
+    },
+    decisionGuide: {
+      goodFitSignals: [
+        'I need to add many unrelated operations to an object structure without changing the element classes',
+        'An object structure contains many classes with differing interfaces and I want to perform type-specific operations',
+        'Operations on the structure change frequently but the structure itself is stable',
+        'I want to accumulate state while traversing a complex structure (compilers, interpreters, serialisers)',
+      ],
+      useWhen: [
+        'An object structure is stable but you often need to define new operations on it',
+        'Many distinct and unrelated operations need to be performed on an object structure without polluting classes',
+        'You want to gather related operations into one visitor class rather than spread them across many classes',
+      ],
+      avoidWhen: [
+        'New element classes are added frequently — every new element requires changing all visitors',
+        'The structure is not stable — use Strategy or polymorphism if elements evolve rapidly',
+        'Access to private state of elements is needed and you cannot add an accept() method',
+      ],
+      complexity: 'High',
+      alternatives: [
+        {
+          slug: 'strategy',
+          name: 'Strategy',
+          reason: 'Use Strategy when a single object needs swappable behaviour rather than applying one operation across many types',
+        },
+        {
+          slug: 'iterator',
+          name: 'Iterator',
+          reason: 'Use Iterator when you need to traverse the structure uniformly without type-specific dispatch',
+        },
+        {
+          slug: 'decorator',
+          name: 'Decorator',
+          reason: 'Use Decorator when you add behaviour to individual objects rather than operating across a whole structure',
+        },
+      ],
+      bottomLine: 'Visitor is ideal when you have a stable class hierarchy but frequently add new operations — if the hierarchy changes often, the cost of updating all visitors outweighs the benefit.',
     },
   },
 ];
