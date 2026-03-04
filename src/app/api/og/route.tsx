@@ -3,6 +3,23 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+// ---------------------------------------------------------------------------
+// Input validation constants
+// ---------------------------------------------------------------------------
+const MAX_TITLE_LEN    = 80;
+const MAX_SUBTITLE_LEN = 160;
+const ALLOWED_TYPES    = new Set(['problem', 'pattern', 'concept', 'default']);
+
+/** Strip HTML tags and control characters, then truncate. */
+function sanitize(raw: string | null, maxLen: number, fallback: string): string {
+  if (!raw) return fallback;
+  return raw
+    .replace(/<[^>]*>/g, '')          // strip HTML
+    .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, '') // strip control chars
+    .trim()
+    .slice(0, maxLen);
+}
+
 const BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   problem:  { bg: '#1e3a5f', text: '#60a5fa', border: '#2563eb' },
   pattern:  { bg: '#2d1b4e', text: '#c084fc', border: '#9333ea' },
@@ -18,10 +35,18 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export async function GET(req: NextRequest) {
+  // Only allow GET (belt-and-suspenders; Next.js route handlers already enforce this)
+  if (req.method !== 'GET') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
   const { searchParams } = req.nextUrl;
-  const title    = searchParams.get('title')    ?? 'LLD Mastery';
-  const subtitle = searchParams.get('subtitle') ?? 'Master Low Level Design';
-  const type     = searchParams.get('type')     ?? 'default';
+
+  // Validate & sanitize all inputs — never trust query params
+  const title    = sanitize(searchParams.get('title'),    MAX_TITLE_LEN,    'LLD Mastery');
+  const subtitle = sanitize(searchParams.get('subtitle'), MAX_SUBTITLE_LEN, 'Master Low Level Design');
+  const rawType  = searchParams.get('type') ?? 'default';
+  const type     = ALLOWED_TYPES.has(rawType) ? rawType : 'default';
 
   const badge  = BADGE_COLORS[type] ?? BADGE_COLORS.default;
   const label  = TYPE_LABELS[type]  ?? TYPE_LABELS.default;
