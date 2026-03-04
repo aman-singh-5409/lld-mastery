@@ -4,6 +4,7 @@ import { oopConcepts, getConceptBySlug } from '@/data/oop';
 import CodeBlock from '@/components/CodeBlock';
 import { ArrowLeft, BookOpen, Code2, Lightbulb } from 'lucide-react';
 import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/site-config';
 
 interface PageProps {
   params: Promise<{ concept: string }>;
@@ -17,9 +18,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { concept: slug } = await params;
   const concept = getConceptBySlug(slug);
   if (!concept) return { title: 'Concept Not Found' };
+
+  const title = `${concept.title} — OOP Concept Explained`;
+  const description = `${concept.description} Interactive code examples in Python, Java, C++, and TypeScript with real-world analogies.`;
+  const ogImageUrl = `/api/og?title=${encodeURIComponent(concept.title)}&subtitle=${encodeURIComponent(concept.description)}&type=concept`;
+
   return {
-    title: concept.title,
-    description: concept.description,
+    title,
+    description,
+    keywords: [
+      concept.title,
+      concept.category,
+      'OOP Concepts',
+      'Object Oriented Programming',
+      'Software Design',
+      ...concept.keyPoints.slice(0, 3),
+    ],
+    alternates: { canonical: `${siteConfig.url}/oop/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `${siteConfig.url}/oop/${slug}`,
+      siteName: siteConfig.name,
+      type: 'article',
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: concept.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
@@ -48,7 +77,36 @@ export default async function OOPConceptPage({ params }: PageProps) {
       ? categoryConceptsList[currentIndex + 1]
       : null;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${siteConfig.url}/oop/${slug}`,
+        headline: concept.title,
+        description: concept.description,
+        author: { '@type': 'Organization', name: siteConfig.name },
+        publisher: { '@type': 'Organization', name: siteConfig.name },
+        url: `${siteConfig.url}/oop/${slug}`,
+        about: { '@type': 'Thing', name: concept.category },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+          { '@type': 'ListItem', position: 2, name: 'OOP Concepts', item: `${siteConfig.url}/oop` },
+          { '@type': 'ListItem', position: 3, name: concept.title, item: `${siteConfig.url}/oop/${slug}` },
+        ],
+      },
+    ],
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm text-zinc-500">
@@ -233,5 +291,6 @@ export default async function OOPConceptPage({ params }: PageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { patterns, getPatternBySlug } from '@/data/patterns';
 import CodeBlock from '@/components/CodeBlock';
 import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Code2 } from 'lucide-react';
 import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/site-config';
 
 interface PageProps {
   params: Promise<{ pattern: string }>;
@@ -17,9 +18,38 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { pattern: slug } = await params;
   const pattern = getPatternBySlug(slug);
   if (!pattern) return { title: 'Pattern Not Found' };
+
+  const title = `${pattern.name} Pattern — ${pattern.category} Design Pattern`;
+  const description = `${pattern.description} Learn the ${pattern.name} pattern with real-world use cases and code examples in Python, Java, C++, and TypeScript.`;
+  const ogImageUrl = `/api/og?title=${encodeURIComponent(pattern.name + ' Pattern')}&subtitle=${encodeURIComponent(pattern.description)}&type=pattern`;
+
   return {
-    title: `${pattern.name} Pattern`,
-    description: pattern.description,
+    title,
+    description,
+    keywords: [
+      pattern.name,
+      `${pattern.name} Pattern`,
+      `${pattern.category} Pattern`,
+      'Design Patterns',
+      'Gang of Four',
+      'Software Design',
+      pattern.intent,
+    ],
+    alternates: { canonical: `${siteConfig.url}/patterns/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `${siteConfig.url}/patterns/${slug}`,
+      siteName: siteConfig.name,
+      type: 'article',
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: pattern.name }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
@@ -57,7 +87,36 @@ export default async function PatternDetailPage({ params }: PageProps) {
   const prevPattern = currentIndex > 0 ? categoryPatterns[currentIndex - 1] : null;
   const nextPattern = currentIndex < categoryPatterns.length - 1 ? categoryPatterns[currentIndex + 1] : null;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${siteConfig.url}/patterns/${slug}`,
+        headline: `${pattern.name} Pattern`,
+        description: pattern.description,
+        author: { '@type': 'Organization', name: siteConfig.name },
+        publisher: { '@type': 'Organization', name: siteConfig.name },
+        url: `${siteConfig.url}/patterns/${slug}`,
+        about: { '@type': 'Thing', name: `${pattern.category} Design Pattern` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+          { '@type': 'ListItem', position: 2, name: 'Design Patterns', item: `${siteConfig.url}/patterns` },
+          { '@type': 'ListItem', position: 3, name: pattern.name, item: `${siteConfig.url}/patterns/${slug}` },
+        ],
+      },
+    ],
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm text-zinc-500">
@@ -219,5 +278,6 @@ export default async function PatternDetailPage({ params }: PageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

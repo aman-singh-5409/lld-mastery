@@ -2,10 +2,50 @@ import Link from 'next/link';
 import { oopConcepts } from '@/data/oop';
 import { ArrowRight, BookOpen, Code2 } from 'lucide-react';
 import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/site-config';
+
+const title = 'OOP Fundamentals — Object-Oriented Programming Concepts';
+const description =
+  'Master Object-Oriented Programming with Encapsulation, Inheritance, Polymorphism, Abstraction, SOLID principles, and more. Interactive code examples in Python, Java, C++, and TypeScript.';
 
 export const metadata: Metadata = {
-  title: 'OOP Fundamentals',
-  description: 'Master Object-Oriented Programming concepts including the four pillars, SOLID principles, and design fundamentals.',
+  title,
+  description,
+  keywords: [
+    'Object Oriented Programming',
+    'OOP Concepts',
+    'Encapsulation',
+    'Inheritance',
+    'Polymorphism',
+    'Abstraction',
+    'SOLID Principles',
+    'Design Principles',
+    'Composition vs Inheritance',
+    'Coupling and Cohesion',
+  ],
+  alternates: { canonical: `${siteConfig.url}/oop` },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/oop`,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: `/api/og?title=${encodeURIComponent('OOP Fundamentals')}&subtitle=${encodeURIComponent(description)}&type=concept`,
+        width: 1200,
+        height: 630,
+        alt: title,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title,
+    description,
+    images: [
+      `/api/og?title=${encodeURIComponent('OOP Fundamentals')}&subtitle=${encodeURIComponent(description)}&type=concept`,
+    ],
+  },
 };
 
 const categoryColors: Record<string, { text: string; bg: string; border: string }> = {
