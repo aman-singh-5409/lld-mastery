@@ -2,10 +2,51 @@ import { patterns } from '@/data/patterns';
 import PatternCard from '@/components/PatternCard';
 import { Layers } from 'lucide-react';
 import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/site-config';
+
+const title = 'Design Patterns — All 22 GoF Patterns Explained';
+const description =
+  'Master all 22 Gang of Four design patterns — Creational, Structural, and Behavioral — with real-world use cases and code examples in Python, Java, C++, and TypeScript.';
 
 export const metadata: Metadata = {
-  title: 'Design Patterns',
-  description: 'Master all 22 Gang of Four design patterns with explanations, use cases, and Python code examples.',
+  title,
+  description,
+  keywords: [
+    'Design Patterns',
+    'Gang of Four',
+    'GoF Patterns',
+    'Creational Patterns',
+    'Structural Patterns',
+    'Behavioral Patterns',
+    'Singleton',
+    'Factory Pattern',
+    'Observer Pattern',
+    'Strategy Pattern',
+    'Software Design',
+  ],
+  alternates: { canonical: `${siteConfig.url}/patterns` },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/patterns`,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: `/api/og?title=${encodeURIComponent('Design Patterns')}&subtitle=${encodeURIComponent(description)}&type=pattern`,
+        width: 1200,
+        height: 630,
+        alt: title,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title,
+    description,
+    images: [
+      `/api/og?title=${encodeURIComponent('Design Patterns')}&subtitle=${encodeURIComponent(description)}&type=pattern`,
+    ],
+  },
 };
 
 const categories = ['Creational', 'Structural', 'Behavioral'] as const;

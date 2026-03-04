@@ -100,12 +100,16 @@ export default async function PatternDetailPage({ params }: PageProps) {
           <section>
             <div className="mb-4 flex items-center gap-2">
               <Code2 className="h-5 w-5 text-blue-400" />
-              <h2 className="text-xl font-semibold text-white">Python Implementation</h2>
+              <h2 className="text-xl font-semibold text-white">Implementation</h2>
             </div>
             <CodeBlock
-              code={pattern.pythonCode}
-              language="python"
-              title={`${pattern.name} Pattern - Python`}
+              tabs={[
+                { language: 'python', label: 'Python', code: pattern.code.python },
+                { language: 'java', label: 'Java', code: pattern.code.java },
+                { language: 'cpp', label: 'C++', code: pattern.code.cpp },
+                { language: 'typescript', label: 'TypeScript', code: pattern.code.typescript },
+              ]}
+              title={`${pattern.name} Pattern`}
             />
           </section>
 

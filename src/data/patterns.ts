@@ -1,3 +1,10 @@
+export interface MultiLangCode {
+  python: string;
+  java: string;
+  cpp: string;
+  typescript: string;
+}
+
 export interface Pattern {
   id: string;
   name: string;
@@ -8,7 +15,7 @@ export interface Pattern {
   useCases: string[];
   pros: string[];
   cons: string[];
-  pythonCode: string;
+  code: MultiLangCode;
 }
 
 export const patterns: Pattern[] = [
@@ -39,19 +46,17 @@ export const patterns: Pattern[] = [
       'Requires special treatment in multithreaded environments',
       'Difficult to unit test due to global state',
     ],
-    pythonCode: `import threading
+    code: {
+      python: `import threading
 
 
 class ThreadSafeSingleton:
-    """Thread-safe Singleton using double-checked locking"""
-
     _instance = None
     _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
-                # Second check after acquiring lock
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
                     print("Singleton instance created")
@@ -61,14 +66,6 @@ class ThreadSafeSingleton:
         return "Hello from Singleton!"
 
 
-# Usage
-s1 = ThreadSafeSingleton()
-s2 = ThreadSafeSingleton()
-print(s1 is s2)  # True - same instance
-print(s1.get_message())
-
-
-# Real-world example: Database Connection
 class DatabaseConnection:
     _instance = None
     _lock = threading.Lock()
@@ -81,7 +78,6 @@ class DatabaseConnection:
                     cls._instance.host = host
                     cls._instance.port = port
                     cls._instance.connection = None
-                    print(f"New DB connection to {host}:{port}")
         return cls._instance
 
     def connect(self):
@@ -90,13 +86,156 @@ class DatabaseConnection:
         return self.connection
 
     def query(self, sql: str):
-        conn = self.connect()
-        return f"Executing '{sql}' on {conn}"
+        return f"Executing '{sql}' on {self.connect()}"
 
+
+s1 = ThreadSafeSingleton()
+s2 = ThreadSafeSingleton()
+print(s1 is s2)   # True
 db1 = DatabaseConnection("prod-db.example.com", 5432)
-db2 = DatabaseConnection()  # Returns same instance
+db2 = DatabaseConnection()
 print(db1 is db2)  # True
 print(db1.query("SELECT * FROM users"))`,
+      java: `public class Singleton {
+    private static volatile Singleton instance;
+    private Singleton() { System.out.println("Singleton instance created"); }
+
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton.class) {
+                if (instance == null) instance = new Singleton();
+            }
+        }
+        return instance;
+    }
+    public String getMessage() { return "Hello from Singleton!"; }
+}
+
+class DatabaseConnection {
+    private static volatile DatabaseConnection instance;
+    private final String host;
+    private final int port;
+    private String connection;
+
+    private DatabaseConnection(String host, int port) {
+        this.host = host; this.port = port;
+        System.out.println("New DB connection to " + host + ":" + port);
+    }
+
+    public static DatabaseConnection getInstance(String host, int port) {
+        if (instance == null) {
+            synchronized (DatabaseConnection.class) {
+                if (instance == null) instance = new DatabaseConnection(host, port);
+            }
+        }
+        return instance;
+    }
+
+    public String query(String sql) {
+        if (connection == null) connection = "Connected to " + host + ":" + port;
+        return "Executing '" + sql + "' on " + connection;
+    }
+
+    public static void main(String[] args) {
+        Singleton s1 = Singleton.getInstance();
+        Singleton s2 = Singleton.getInstance();
+        System.out.println(s1 == s2);  // true
+        DatabaseConnection db = DatabaseConnection.getInstance("prod-db.example.com", 5432);
+        System.out.println(db.query("SELECT * FROM users"));
+    }
+}`,
+      cpp: `#include <iostream>
+#include <mutex>
+#include <string>
+using namespace std;
+
+class Singleton {
+    static Singleton* instance;
+    static mutex mtx;
+    Singleton() { cout << "Singleton instance created\n"; }
+public:
+    Singleton(const Singleton&) = delete;
+    static Singleton* getInstance() {
+        if (!instance) {
+            lock_guard<mutex> lock(mtx);
+            if (!instance) instance = new Singleton();
+        }
+        return instance;
+    }
+    string getMessage() { return "Hello from Singleton!"; }
+};
+Singleton* Singleton::instance = nullptr;
+mutex Singleton::mtx;
+
+class DatabaseConnection {
+    static DatabaseConnection* instance;
+    static mutex mtx;
+    string host; int port; string conn;
+    DatabaseConnection(const string& h, int p) : host(h), port(p) {
+        cout << "New DB connection to " << h << ":" << p << "\n";
+    }
+public:
+    DatabaseConnection(const DatabaseConnection&) = delete;
+    static DatabaseConnection* getInstance(const string& host="localhost", int port=5432) {
+        if (!instance) {
+            lock_guard<mutex> lock(mtx);
+            if (!instance) instance = new DatabaseConnection(host, port);
+        }
+        return instance;
+    }
+    string query(const string& sql) {
+        if (conn.empty()) conn = "Connected to " + host + ":" + to_string(port);
+        return "Executing '" + sql + "' on " + conn;
+    }
+};
+DatabaseConnection* DatabaseConnection::instance = nullptr;
+mutex DatabaseConnection::mtx;
+
+int main() {
+    auto* s1 = Singleton::getInstance();
+    auto* s2 = Singleton::getInstance();
+    cout << (s1 == s2) << "\n";  // 1
+    cout << s1->getMessage() << "\n";
+    auto* db = DatabaseConnection::getInstance("prod-db.example.com", 5432);
+    cout << db->query("SELECT * FROM users") << "\n";
+}`,
+      typescript: `class ThreadSafeSingleton {
+  private static instance: ThreadSafeSingleton | null = null;
+  private constructor() { console.log("Singleton instance created"); }
+
+  static getInstance(): ThreadSafeSingleton {
+    if (!ThreadSafeSingleton.instance) {
+      ThreadSafeSingleton.instance = new ThreadSafeSingleton();
+    }
+    return ThreadSafeSingleton.instance;
+  }
+  getMessage(): string { return "Hello from Singleton!"; }
+}
+
+class DatabaseConnection {
+  private static instance: DatabaseConnection | null = null;
+  private connection: string | null = null;
+  private constructor(private host: string, private port: number) {
+    console.log(\`New DB connection to \${host}:\${port}\`);
+  }
+  static getInstance(host = "localhost", port = 5432): DatabaseConnection {
+    if (!DatabaseConnection.instance) {
+      DatabaseConnection.instance = new DatabaseConnection(host, port);
+    }
+    return DatabaseConnection.instance;
+  }
+  query(sql: string): string {
+    if (!this.connection) this.connection = \`Connected to \${this.host}:\${this.port}\`;
+    return \`Executing '\${sql}' on \${this.connection}\`;
+  }
+}
+
+const s1 = ThreadSafeSingleton.getInstance();
+const s2 = ThreadSafeSingleton.getInstance();
+console.log(s1 === s2);  // true
+const db = DatabaseConnection.getInstance("prod-db.example.com", 5432);
+console.log(db.query("SELECT * FROM users"));`,
+    },
   },
   {
     id: 'factory',
@@ -123,79 +262,233 @@ print(db1.query("SELECT * FROM users"))`,
       'Client must subclass to change the type of product',
       'Can lead to a parallel class hierarchy',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 
 
 class Notification(ABC):
-    """Abstract Product"""
-
     @abstractmethod
     def send(self, recipient: str, message: str) -> str:
         pass
-
 
 class EmailNotification(Notification):
     def send(self, recipient: str, message: str) -> str:
         return f"Email to {recipient}: {message}"
 
-
 class SMSNotification(Notification):
     def send(self, recipient: str, message: str) -> str:
         return f"SMS to {recipient}: {message}"
 
-
 class PushNotification(Notification):
     def send(self, recipient: str, message: str) -> str:
-        return f"Push notification to {recipient}: {message}"
+        return f"Push to {recipient}: {message}"
 
 
 class NotificationCreator(ABC):
-    """Abstract Creator - Factory Method"""
-
     @abstractmethod
     def create_notification(self) -> Notification:
-        """Factory method - subclasses implement this"""
         pass
 
     def notify(self, recipient: str, message: str) -> str:
-        """Uses the factory method"""
         notification = self.create_notification()
         return notification.send(recipient, message)
 
-
-class EmailNotificationCreator(NotificationCreator):
+class EmailCreator(NotificationCreator):
     def create_notification(self) -> Notification:
         return EmailNotification()
 
-
-class SMSNotificationCreator(NotificationCreator):
+class SMSCreator(NotificationCreator):
     def create_notification(self) -> Notification:
         return SMSNotification()
 
 
-# Simple Factory (alternative approach)
 class SimpleNotificationFactory:
     @staticmethod
-    def create_notification(notification_type: str) -> Notification:
-        types = {
-            "EMAIL": EmailNotification,
-            "SMS": SMSNotification,
-            "PUSH": PushNotification,
-        }
+    def create(notification_type: str) -> Notification:
+        types = {"EMAIL": EmailNotification, "SMS": SMSNotification, "PUSH": PushNotification}
         cls = types.get(notification_type.upper())
         if not cls:
             raise ValueError(f"Unknown type: {notification_type}")
         return cls()
 
 
-# Usage
-email_creator = EmailNotificationCreator()
-result = email_creator.notify("user@example.com", "Hello!")
-print(result)  # Email to user@example.com: Hello!
-
-factory = SimpleNotificationFactory()
-sms = factory.create_notification("SMS")
+email_creator = EmailCreator()
+print(email_creator.notify("user@example.com", "Hello!"))
+sms = SimpleNotificationFactory.create("SMS")
 print(sms.send("+1234567890", "Verification code: 1234"))`,
+      java: `abstract class Notification {
+    public abstract String send(String recipient, String message);
+}
+
+class EmailNotification extends Notification {
+    public String send(String recipient, String message) {
+        return "Email to " + recipient + ": " + message;
+    }
+}
+
+class SMSNotification extends Notification {
+    public String send(String recipient, String message) {
+        return "SMS to " + recipient + ": " + message;
+    }
+}
+
+class PushNotification extends Notification {
+    public String send(String recipient, String message) {
+        return "Push to " + recipient + ": " + message;
+    }
+}
+
+abstract class NotificationCreator {
+    public abstract Notification createNotification();
+
+    public String notify(String recipient, String message) {
+        return createNotification().send(recipient, message);
+    }
+}
+
+class EmailCreator extends NotificationCreator {
+    public Notification createNotification() { return new EmailNotification(); }
+}
+
+class SMSCreator extends NotificationCreator {
+    public Notification createNotification() { return new SMSNotification(); }
+}
+
+class SimpleNotificationFactory {
+    public static Notification create(String type) {
+        switch (type.toUpperCase()) {
+            case "EMAIL": return new EmailNotification();
+            case "SMS":   return new SMSNotification();
+            case "PUSH":  return new PushNotification();
+            default: throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+    public static void main(String[] args) {
+        NotificationCreator creator = new EmailCreator();
+        System.out.println(creator.notify("user@example.com", "Hello!"));
+        Notification sms = SimpleNotificationFactory.create("SMS");
+        System.out.println(sms.send("+1234567890", "Verification code: 1234"));
+    }
+}`,
+      cpp: `#include <iostream>
+#include <memory>
+#include <string>
+#include <stdexcept>
+using namespace std;
+
+class Notification {
+public:
+    virtual string send(const string& recipient, const string& message) = 0;
+    virtual ~Notification() = default;
+};
+
+class EmailNotification : public Notification {
+public:
+    string send(const string& r, const string& m) override {
+        return "Email to " + r + ": " + m;
+    }
+};
+
+class SMSNotification : public Notification {
+public:
+    string send(const string& r, const string& m) override {
+        return "SMS to " + r + ": " + m;
+    }
+};
+
+class NotificationCreator {
+public:
+    virtual unique_ptr<Notification> createNotification() = 0;
+    string notify(const string& recipient, const string& message) {
+        return createNotification()->send(recipient, message);
+    }
+    virtual ~NotificationCreator() = default;
+};
+
+class EmailCreator : public NotificationCreator {
+public:
+    unique_ptr<Notification> createNotification() override {
+        return make_unique<EmailNotification>();
+    }
+};
+
+class SMSCreator : public NotificationCreator {
+public:
+    unique_ptr<Notification> createNotification() override {
+        return make_unique<SMSNotification>();
+    }
+};
+
+class SimpleNotificationFactory {
+public:
+    static unique_ptr<Notification> create(const string& type) {
+        if (type == "EMAIL") return make_unique<EmailNotification>();
+        if (type == "SMS")   return make_unique<SMSNotification>();
+        throw invalid_argument("Unknown type: " + type);
+    }
+};
+
+int main() {
+    EmailCreator creator;
+    cout << creator.notify("user@example.com", "Hello!") << "\n";
+    auto sms = SimpleNotificationFactory::create("SMS");
+    cout << sms->send("+1234567890", "Verification code: 1234") << "\n";
+}`,
+      typescript: `interface Notification {
+  send(recipient: string, message: string): string;
+}
+
+class EmailNotification implements Notification {
+  send(recipient: string, message: string): string {
+    return \`Email to \${recipient}: \${message}\`;
+  }
+}
+
+class SMSNotification implements Notification {
+  send(recipient: string, message: string): string {
+    return \`SMS to \${recipient}: \${message}\`;
+  }
+}
+
+class PushNotification implements Notification {
+  send(recipient: string, message: string): string {
+    return \`Push to \${recipient}: \${message}\`;
+  }
+}
+
+abstract class NotificationCreator {
+  abstract createNotification(): Notification;
+  notify(recipient: string, message: string): string {
+    return this.createNotification().send(recipient, message);
+  }
+}
+
+class EmailCreator extends NotificationCreator {
+  createNotification(): Notification { return new EmailNotification(); }
+}
+
+class SMSCreator extends NotificationCreator {
+  createNotification(): Notification { return new SMSNotification(); }
+}
+
+class SimpleNotificationFactory {
+  static create(type: string): Notification {
+    const types: Record<string, new () => Notification> = {
+      EMAIL: EmailNotification,
+      SMS: SMSNotification,
+      PUSH: PushNotification,
+    };
+    const Cls = types[type.toUpperCase()];
+    if (!Cls) throw new Error(\`Unknown type: \${type}\`);
+    return new Cls();
+  }
+}
+
+const creator = new EmailCreator();
+console.log(creator.notify("user@example.com", "Hello!"));
+const sms = SimpleNotificationFactory.create("SMS");
+console.log(sms.send("+1234567890", "Verification code: 1234"));`,
+    },
   },
   {
     id: 'abstract-factory',
@@ -222,10 +515,11 @@ print(sms.send("+1234567890", "Verification code: 1234"))`,
       'Hard to add support for new kinds of products',
       'Can be overkill for simple cases',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
+import sys
 
 
-# Abstract Products
 class Button(ABC):
     @abstractmethod
     def render(self) -> str:
@@ -237,55 +531,34 @@ class Checkbox(ABC):
         pass
 
 
-# Concrete Products - Windows
 class WindowsButton(Button):
-    def render(self) -> str:
-        return "Rendering Windows Button"
+    def render(self) -> str: return "Rendering Windows Button"
 
 class WindowsCheckbox(Checkbox):
-    def render(self) -> str:
-        return "Rendering Windows Checkbox"
+    def render(self) -> str: return "Rendering Windows Checkbox"
 
-
-# Concrete Products - Mac
 class MacButton(Button):
-    def render(self) -> str:
-        return "Rendering Mac Button"
+    def render(self) -> str: return "Rendering Mac Button"
 
 class MacCheckbox(Checkbox):
-    def render(self) -> str:
-        return "Rendering Mac Checkbox"
+    def render(self) -> str: return "Rendering Mac Checkbox"
 
 
-# Abstract Factory
 class GUIFactory(ABC):
     @abstractmethod
-    def create_button(self) -> Button:
-        pass
-
+    def create_button(self) -> Button: pass
     @abstractmethod
-    def create_checkbox(self) -> Checkbox:
-        pass
+    def create_checkbox(self) -> Checkbox: pass
 
-
-# Concrete Factories
 class WindowsFactory(GUIFactory):
-    def create_button(self) -> Button:
-        return WindowsButton()
-
-    def create_checkbox(self) -> Checkbox:
-        return WindowsCheckbox()
-
+    def create_button(self) -> Button: return WindowsButton()
+    def create_checkbox(self) -> Checkbox: return WindowsCheckbox()
 
 class MacFactory(GUIFactory):
-    def create_button(self) -> Button:
-        return MacButton()
-
-    def create_checkbox(self) -> Checkbox:
-        return MacCheckbox()
+    def create_button(self) -> Button: return MacButton()
+    def create_checkbox(self) -> Checkbox: return MacCheckbox()
 
 
-# Client code
 class Application:
     def __init__(self, factory: GUIFactory):
         self.button = factory.create_button()
@@ -296,12 +569,140 @@ class Application:
         print(self.checkbox.render())
 
 
-# Platform detection and factory selection
-import sys
 platform = "windows" if sys.platform == "win32" else "mac"
 factory = WindowsFactory() if platform == "windows" else MacFactory()
 app = Application(factory)
 app.render()`,
+      java: `interface Button { String render(); }
+interface Checkbox { String render(); }
+
+class WindowsButton implements Button { public String render() { return "Rendering Windows Button"; } }
+class WindowsCheckbox implements Checkbox { public String render() { return "Rendering Windows Checkbox"; } }
+class MacButton implements Button { public String render() { return "Rendering Mac Button"; } }
+class MacCheckbox implements Checkbox { public String render() { return "Rendering Mac Checkbox"; } }
+
+interface GUIFactory {
+    Button createButton();
+    Checkbox createCheckbox();
+}
+
+class WindowsFactory implements GUIFactory {
+    public Button createButton() { return new WindowsButton(); }
+    public Checkbox createCheckbox() { return new WindowsCheckbox(); }
+}
+
+class MacFactory implements GUIFactory {
+    public Button createButton() { return new MacButton(); }
+    public Checkbox createCheckbox() { return new MacCheckbox(); }
+}
+
+class Application {
+    private final Button button;
+    private final Checkbox checkbox;
+
+    Application(GUIFactory factory) {
+        button = factory.createButton();
+        checkbox = factory.createCheckbox();
+    }
+
+    void render() {
+        System.out.println(button.render());
+        System.out.println(checkbox.render());
+    }
+
+    public static void main(String[] args) {
+        String os = System.getProperty("os.name").toLowerCase();
+        GUIFactory factory = os.contains("win") ? new WindowsFactory() : new MacFactory();
+        new Application(factory).render();
+    }
+}`,
+      cpp: `#include <iostream>
+#include <memory>
+using namespace std;
+
+class Button { public: virtual string render() = 0; virtual ~Button() = default; };
+class Checkbox { public: virtual string render() = 0; virtual ~Checkbox() = default; };
+
+class WindowsButton : public Button { public: string render() override { return "Rendering Windows Button"; } };
+class WindowsCheckbox : public Checkbox { public: string render() override { return "Rendering Windows Checkbox"; } };
+class MacButton : public Button { public: string render() override { return "Rendering Mac Button"; } };
+class MacCheckbox : public Checkbox { public: string render() override { return "Rendering Mac Checkbox"; } };
+
+class GUIFactory {
+public:
+    virtual unique_ptr<Button> createButton() = 0;
+    virtual unique_ptr<Checkbox> createCheckbox() = 0;
+    virtual ~GUIFactory() = default;
+};
+
+class WindowsFactory : public GUIFactory {
+public:
+    unique_ptr<Button> createButton() override { return make_unique<WindowsButton>(); }
+    unique_ptr<Checkbox> createCheckbox() override { return make_unique<WindowsCheckbox>(); }
+};
+
+class MacFactory : public GUIFactory {
+public:
+    unique_ptr<Button> createButton() override { return make_unique<MacButton>(); }
+    unique_ptr<Checkbox> createCheckbox() override { return make_unique<MacCheckbox>(); }
+};
+
+class Application {
+    unique_ptr<Button> button;
+    unique_ptr<Checkbox> checkbox;
+public:
+    Application(GUIFactory& factory)
+        : button(factory.createButton()), checkbox(factory.createCheckbox()) {}
+    void render() {
+        cout << button->render() << "\n" << checkbox->render() << "\n";
+    }
+};
+
+int main() {
+    WindowsFactory factory;
+    Application app(factory);
+    app.render();
+}`,
+      typescript: `interface Button { render(): string; }
+interface Checkbox { render(): string; }
+
+class WindowsButton implements Button { render() { return "Rendering Windows Button"; } }
+class WindowsCheckbox implements Checkbox { render() { return "Rendering Windows Checkbox"; } }
+class MacButton implements Button { render() { return "Rendering Mac Button"; } }
+class MacCheckbox implements Checkbox { render() { return "Rendering Mac Checkbox"; } }
+
+interface GUIFactory {
+  createButton(): Button;
+  createCheckbox(): Checkbox;
+}
+
+class WindowsFactory implements GUIFactory {
+  createButton(): Button { return new WindowsButton(); }
+  createCheckbox(): Checkbox { return new WindowsCheckbox(); }
+}
+
+class MacFactory implements GUIFactory {
+  createButton(): Button { return new MacButton(); }
+  createCheckbox(): Checkbox { return new MacCheckbox(); }
+}
+
+class Application {
+  private button: Button;
+  private checkbox: Checkbox;
+  constructor(factory: GUIFactory) {
+    this.button = factory.createButton();
+    this.checkbox = factory.createCheckbox();
+  }
+  render(): void {
+    console.log(this.button.render());
+    console.log(this.checkbox.render());
+  }
+}
+
+const factory: GUIFactory = process.platform === 'win32' ? new WindowsFactory() : new MacFactory();
+const app = new Application(factory);
+app.render();`,
+    },
   },
   {
     id: 'builder',
@@ -328,41 +729,29 @@ app.render()`,
       'Must create a concrete builder for each type of product',
       'Can be overkill for simple objects',
     ],
-    pythonCode: `from typing import Dict, Optional
+    code: {
+      python: `from typing import Dict, Optional
 
 
 class HttpRequest:
-    """Immutable HttpRequest object created using Builder pattern"""
-
     def __init__(self, builder: 'HttpRequest.Builder'):
         self._url = builder._url
         self._method = builder._method
         self._headers = dict(builder._headers)
-        self._query_params = dict(builder._query_params)
         self._body = builder._body
         self._timeout = builder._timeout
 
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @property
-    def method(self) -> str:
-        return self._method
-
     def __str__(self) -> str:
         return (f"HttpRequest(url='{self._url}', method='{self._method}', "
-                f"headers={self._headers}, body='{self._body}', "
-                f"timeout={self._timeout}ms)")
+                f"headers={self._headers}, body='{self._body}', timeout={self._timeout}ms)")
 
     class Builder:
         def __init__(self, url: str):
-            if not url or not url.strip():
+            if not url.strip():
                 raise ValueError("URL cannot be empty")
             self._url = url
             self._method = "GET"
             self._headers: Dict[str, str] = {}
-            self._query_params: Dict[str, str] = {}
             self._body: Optional[str] = None
             self._timeout = 30000
 
@@ -374,34 +763,180 @@ class HttpRequest:
             self._headers[key] = value
             return self
 
-        def query_param(self, key: str, value: str) -> 'HttpRequest.Builder':
-            self._query_params[key] = value
-            return self
-
         def body(self, body: str) -> 'HttpRequest.Builder':
             self._body = body
             return self
 
-        def timeout(self, timeout_millis: int) -> 'HttpRequest.Builder':
-            if timeout_millis > 0:
-                self._timeout = timeout_millis
+        def timeout(self, ms: int) -> 'HttpRequest.Builder':
+            if ms > 0: self._timeout = ms
             return self
 
         def build(self) -> 'HttpRequest':
             return HttpRequest(self)
 
 
-# Usage - Fluent API
 request = (HttpRequest.Builder("https://api.example.com/users")
     .method("POST")
     .header("Content-Type", "application/json")
     .header("Authorization", "Bearer token123")
-    .query_param("version", "v2")
     .body('{"name": "John", "email": "john@example.com"}')
     .timeout(5000)
     .build())
 
 print(request)`,
+      java: `import java.util.HashMap;
+import java.util.Map;
+
+class HttpRequest {
+    private final String url;
+    private final String method;
+    private final Map<String, String> headers;
+    private final String body;
+    private final int timeout;
+
+    private HttpRequest(Builder builder) {
+        this.url = builder.url;
+        this.method = builder.method;
+        this.headers = new HashMap<>(builder.headers);
+        this.body = builder.body;
+        this.timeout = builder.timeout;
+    }
+
+    public String toString() {
+        return "HttpRequest(url='" + url + "', method='" + method +
+               "', headers=" + headers + ", body='" + body + "', timeout=" + timeout + "ms)";
+    }
+
+    static class Builder {
+        private final String url;
+        private String method = "GET";
+        private Map<String, String> headers = new HashMap<>();
+        private String body;
+        private int timeout = 30000;
+
+        Builder(String url) {
+            if (url == null || url.trim().isEmpty())
+                throw new IllegalArgumentException("URL cannot be empty");
+            this.url = url;
+        }
+
+        Builder method(String method) { this.method = method.toUpperCase(); return this; }
+        Builder header(String k, String v) { headers.put(k, v); return this; }
+        Builder body(String body) { this.body = body; return this; }
+        Builder timeout(int ms) { if (ms > 0) this.timeout = ms; return this; }
+        HttpRequest build() { return new HttpRequest(this); }
+    }
+
+    public static void main(String[] args) {
+        HttpRequest req = new HttpRequest.Builder("https://api.example.com/users")
+            .method("POST")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer token123")
+            .body("{\\"name\\": \\"John\\"}")
+            .timeout(5000)
+            .build();
+        System.out.println(req);
+    }
+}`,
+      cpp: `#include <iostream>
+#include <map>
+#include <string>
+#include <stdexcept>
+using namespace std;
+
+class HttpRequest {
+    string url, method, body;
+    map<string,string> headers;
+    int timeout;
+    HttpRequest() {}
+public:
+    string toString() const {
+        return "HttpRequest(url='" + url + "', method='" + method +
+               "', body='" + body + "', timeout=" + to_string(timeout) + "ms)";
+    }
+
+    class Builder {
+        string url, method = "GET", body;
+        map<string,string> headers;
+        int timeout = 30000;
+    public:
+        Builder(const string& u) {
+            if (u.empty()) throw invalid_argument("URL cannot be empty");
+            url = u;
+        }
+        Builder& setMethod(const string& m) { method = m; return *this; }
+        Builder& header(const string& k, const string& v) { headers[k] = v; return *this; }
+        Builder& setBody(const string& b) { body = b; return *this; }
+        Builder& setTimeout(int ms) { if (ms > 0) timeout = ms; return *this; }
+        HttpRequest build() {
+            HttpRequest r;
+            r.url = url; r.method = method; r.headers = headers;
+            r.body = body; r.timeout = timeout;
+            return r;
+        }
+    };
+};
+
+int main() {
+    HttpRequest req = HttpRequest::Builder("https://api.example.com/users")
+        .setMethod("POST")
+        .header("Content-Type", "application/json")
+        .header("Authorization", "Bearer token123")
+        .setBody("{\\"name\\": \\"John\\"}")
+        .setTimeout(5000)
+        .build();
+    cout << req.toString() << "\n";
+}`,
+      typescript: `class HttpRequest {
+  private constructor(
+    private readonly url: string,
+    private readonly method: string,
+    private readonly headers: Record<string, string>,
+    private readonly body: string | null,
+    private readonly timeout: number
+  ) {}
+
+  toString(): string {
+    return \`HttpRequest(url='\${this.url}', method='\${this.method}', body='\${this.body}', timeout=\${this.timeout}ms)\`;
+  }
+
+  static builder(url: string): HttpRequest.Builder {
+    return new HttpRequest.Builder(url);
+  }
+}
+
+namespace HttpRequest {
+  export class Builder {
+    private method = 'GET';
+    private headers: Record<string, string> = {};
+    private body: string | null = null;
+    private timeout = 30000;
+
+    constructor(private url: string) {
+      if (!url.trim()) throw new Error('URL cannot be empty');
+    }
+
+    setMethod(method: string): this { this.method = method.toUpperCase(); return this; }
+    header(key: string, value: string): this { this.headers[key] = value; return this; }
+    setBody(body: string): this { this.body = body; return this; }
+    setTimeout(ms: number): this { if (ms > 0) this.timeout = ms; return this; }
+
+    build(): HttpRequest {
+      return new (HttpRequest as any)(this.url, this.method, this.headers, this.body, this.timeout);
+    }
+  }
+}
+
+const request = HttpRequest.builder('https://api.example.com/users')
+  .setMethod('POST')
+  .header('Content-Type', 'application/json')
+  .header('Authorization', 'Bearer token123')
+  .setBody('{"name": "John"}')
+  .setTimeout(5000)
+  .build();
+
+console.log(request.toString());`,
+    },
   },
   {
     id: 'prototype',
@@ -428,7 +963,8 @@ print(request)`,
       'Deep vs shallow copy confusion',
       'Each subclass must implement clone method',
     ],
-    pythonCode: `import copy
+    code: {
+      python: `import copy
 from abc import ABC, abstractmethod
 
 
@@ -470,7 +1006,6 @@ class Rectangle(Shape):
         return f"Rectangle(color={self.color}, {self.width}x{self.height})"
 
 
-# Prototype Registry
 class ShapeRegistry:
     def __init__(self):
         self._prototypes: dict = {}
@@ -484,19 +1019,161 @@ class ShapeRegistry:
         return self._prototypes[key].clone()
 
 
-# Usage
 registry = ShapeRegistry()
 registry.register("small_red_circle", Circle("red", 5.0))
 registry.register("large_blue_rect", Rectangle("blue", 100.0, 50.0))
 
-# Clone instead of creating from scratch
 c1 = registry.create("small_red_circle")
 c2 = registry.create("small_red_circle")
-c2.color = "green"  # Modify clone without affecting prototype
+c2.color = "green"
 
 print(c1.draw())  # Circle(color=red, radius=5.0)
 print(c2.draw())  # Circle(color=green, radius=5.0)
-print(c1 is c2)   # False - different objects`,
+print(c1 is c2)   # False`,
+      java: `import java.util.HashMap;
+import java.util.Map;
+
+abstract class Shape implements Cloneable {
+    protected String color;
+    Shape(String color) { this.color = color; }
+    public abstract Shape clone();
+    public abstract String draw();
+}
+
+class Circle extends Shape {
+    private double radius;
+    Circle(String color, double radius) { super(color); this.radius = radius; }
+    public Circle clone() { return new Circle(color, radius); }
+    public String draw() { return "Circle(color=" + color + ", radius=" + radius + ")"; }
+}
+
+class Rectangle extends Shape {
+    private double width, height;
+    Rectangle(String color, double w, double h) { super(color); width=w; height=h; }
+    public Rectangle clone() { return new Rectangle(color, width, height); }
+    public String draw() { return "Rectangle(color=" + color + ", " + width + "x" + height + ")"; }
+}
+
+class ShapeRegistry {
+    private Map<String, Shape> prototypes = new HashMap<>();
+    public void register(String key, Shape s) { prototypes.put(key, s); }
+    public Shape create(String key) {
+        Shape p = prototypes.get(key);
+        if (p == null) throw new IllegalArgumentException("Prototype not found: " + key);
+        return p.clone();
+    }
+
+    public static void main(String[] args) {
+        ShapeRegistry registry = new ShapeRegistry();
+        registry.register("small_red_circle", new Circle("red", 5.0));
+        registry.register("large_blue_rect", new Rectangle("blue", 100.0, 50.0));
+
+        Shape c1 = registry.create("small_red_circle");
+        Shape c2 = registry.create("small_red_circle");
+        c2.color = "green";
+        System.out.println(c1.draw());  // Circle(color=red, radius=5.0)
+        System.out.println(c2.draw());  // Circle(color=green, radius=5.0)
+        System.out.println(c1 == c2);   // false
+    }
+}`,
+      cpp: `#include <iostream>
+#include <memory>
+#include <map>
+#include <string>
+#include <stdexcept>
+using namespace std;
+
+class Shape {
+public:
+    string color;
+    Shape(const string& c) : color(c) {}
+    virtual unique_ptr<Shape> clone() const = 0;
+    virtual string draw() const = 0;
+    virtual ~Shape() = default;
+};
+
+class Circle : public Shape {
+    double radius;
+public:
+    Circle(const string& c, double r) : Shape(c), radius(r) {}
+    unique_ptr<Shape> clone() const override { return make_unique<Circle>(*this); }
+    string draw() const override {
+        return "Circle(color=" + color + ", radius=" + to_string(radius) + ")";
+    }
+};
+
+class Rectangle : public Shape {
+    double width, height;
+public:
+    Rectangle(const string& c, double w, double h) : Shape(c), width(w), height(h) {}
+    unique_ptr<Shape> clone() const override { return make_unique<Rectangle>(*this); }
+    string draw() const override {
+        return "Rectangle(color=" + color + ", " + to_string(width) + "x" + to_string(height) + ")";
+    }
+};
+
+class ShapeRegistry {
+    map<string, unique_ptr<Shape>> prototypes;
+public:
+    void registerShape(const string& key, unique_ptr<Shape> s) {
+        prototypes[key] = move(s);
+    }
+    unique_ptr<Shape> create(const string& key) {
+        auto it = prototypes.find(key);
+        if (it == prototypes.end()) throw invalid_argument("Prototype not found: " + key);
+        return it->second->clone();
+    }
+};
+
+int main() {
+    ShapeRegistry registry;
+    registry.registerShape("circle", make_unique<Circle>("red", 5.0));
+    auto c1 = registry.create("circle");
+    auto c2 = registry.create("circle");
+    c2->color = "green";
+    cout << c1->draw() << "\n";  // Circle(color=red, ...)
+    cout << c2->draw() << "\n";  // Circle(color=green, ...)
+    cout << (c1.get() == c2.get()) << "\n";  // 0 (false)
+}`,
+      typescript: `abstract class Shape {
+  constructor(public color: string) {}
+  abstract clone(): Shape;
+  abstract draw(): string;
+}
+
+class Circle extends Shape {
+  constructor(color: string, public radius: number) { super(color); }
+  clone(): Circle { return new Circle(this.color, this.radius); }
+  draw(): string { return \`Circle(color=\${this.color}, radius=\${this.radius})\`; }
+}
+
+class Rectangle extends Shape {
+  constructor(color: string, public width: number, public height: number) { super(color); }
+  clone(): Rectangle { return new Rectangle(this.color, this.width, this.height); }
+  draw(): string { return \`Rectangle(color=\${this.color}, \${this.width}x\${this.height})\`; }
+}
+
+class ShapeRegistry {
+  private prototypes = new Map<string, Shape>();
+  register(key: string, shape: Shape): void { this.prototypes.set(key, shape); }
+  create(key: string): Shape {
+    const p = this.prototypes.get(key);
+    if (!p) throw new Error(\`Prototype not found: \${key}\`);
+    return p.clone();
+  }
+}
+
+const registry = new ShapeRegistry();
+registry.register('circle', new Circle('red', 5));
+registry.register('rect', new Rectangle('blue', 100, 50));
+
+const c1 = registry.create('circle');
+const c2 = registry.create('circle');
+c2.color = 'green';
+console.log(c1.draw());   // Circle(color=red, radius=5)
+console.log(c2.draw());   // Circle(color=green, radius=5)
+console.log(c1 === c2);   // false`,
+    },
   },
 
   // STRUCTURAL PATTERNS
@@ -523,64 +1200,190 @@ print(c1 is c2)   # False - different objects`,
       'Overall complexity increases with additional classes',
       'Sometimes it is simpler to change the service class to match the interface',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 
 
-# Target interface (what client expects)
 class PaymentProcessor(ABC):
     @abstractmethod
     def process_payment(self, amount: float, currency: str) -> bool:
         pass
 
 
-# Adaptee (existing/legacy class with incompatible interface)
 class LegacyGateway:
     def make_payment(self, amount_cents: int, currency_code: str) -> int:
-        """Returns status code: 0=success, 1=failure"""
         print(f"Legacy: Processing {amount_cents} cents in {currency_code}")
-        return 0  # Success
+        return 0  # 0=success
 
 
-# Adapter - makes LegacyGateway compatible with PaymentProcessor
 class LegacyGatewayAdapter(PaymentProcessor):
     def __init__(self, legacy_gateway: LegacyGateway):
         self._legacy = legacy_gateway
 
     def process_payment(self, amount: float, currency: str) -> bool:
-        # Convert from PaymentProcessor interface to LegacyGateway interface
         amount_cents = int(amount * 100)
         status_code = self._legacy.make_payment(amount_cents, currency.upper())
-        return status_code == 0  # Convert status code to boolean
+        return status_code == 0
 
 
-# Modern payment processor (no adapter needed)
 class ModernPaymentProcessor(PaymentProcessor):
     def process_payment(self, amount: float, currency: str) -> bool:
         print(f"Modern: Processing {amount:.2f} {currency}")
         return True
 
 
-# Client code works with PaymentProcessor interface
 class CheckoutService:
     def __init__(self, processor: PaymentProcessor):
         self._processor = processor
 
     def checkout(self, amount: float, currency: str = "USD"):
         success = self._processor.process_payment(amount, currency)
-        status = "succeeded" if success else "failed"
-        print(f"Checkout {status} for {amount:.2f}")
+        print(f"Checkout {'succeeded' if success else 'failed'} for {amount:.2f}")
 
 
-# Usage - client doesn't care if it's legacy or modern
 legacy = LegacyGateway()
 adapter = LegacyGatewayAdapter(legacy)
-service = CheckoutService(adapter)
-service.checkout(29.99)
+CheckoutService(adapter).checkout(29.99)
 
-# Swap to modern processor without changing CheckoutService
 modern = ModernPaymentProcessor()
-service2 = CheckoutService(modern)
-service2.checkout(49.99)`,
+CheckoutService(modern).checkout(49.99)`,
+      java: `interface PaymentProcessor {
+    boolean processPayment(double amount, String currency);
+}
+
+class LegacyGateway {
+    public int makePayment(int amountCents, String currencyCode) {
+        System.out.println("Legacy: Processing " + amountCents + " cents in " + currencyCode);
+        return 0;  // 0=success
+    }
+}
+
+class LegacyGatewayAdapter implements PaymentProcessor {
+    private final LegacyGateway legacy;
+    LegacyGatewayAdapter(LegacyGateway legacy) { this.legacy = legacy; }
+
+    public boolean processPayment(double amount, String currency) {
+        int amountCents = (int)(amount * 100);
+        int statusCode = legacy.makePayment(amountCents, currency.toUpperCase());
+        return statusCode == 0;
+    }
+}
+
+class ModernPaymentProcessor implements PaymentProcessor {
+    public boolean processPayment(double amount, String currency) {
+        System.out.printf("Modern: Processing %.2f %s%n", amount, currency);
+        return true;
+    }
+}
+
+class CheckoutService {
+    private final PaymentProcessor processor;
+    CheckoutService(PaymentProcessor processor) { this.processor = processor; }
+    void checkout(double amount, String currency) {
+        boolean ok = processor.processPayment(amount, currency);
+        System.out.printf("Checkout %s for %.2f%n", ok ? "succeeded" : "failed", amount);
+    }
+
+    public static void main(String[] args) {
+        LegacyGateway legacy = new LegacyGateway();
+        PaymentProcessor adapter = new LegacyGatewayAdapter(legacy);
+        new CheckoutService(adapter).checkout(29.99, "USD");
+
+        new CheckoutService(new ModernPaymentProcessor()).checkout(49.99, "USD");
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+class PaymentProcessor {
+public:
+    virtual bool processPayment(double amount, const string& currency) = 0;
+    virtual ~PaymentProcessor() = default;
+};
+
+class LegacyGateway {
+public:
+    int makePayment(int amountCents, const string& currencyCode) {
+        cout << "Legacy: Processing " << amountCents << " cents in " << currencyCode << "\n";
+        return 0;  // 0=success
+    }
+};
+
+class LegacyGatewayAdapter : public PaymentProcessor {
+    LegacyGateway& legacy;
+public:
+    LegacyGatewayAdapter(LegacyGateway& lg) : legacy(lg) {}
+    bool processPayment(double amount, const string& currency) override {
+        int cents = static_cast<int>(amount * 100);
+        return legacy.makePayment(cents, currency) == 0;
+    }
+};
+
+class ModernPaymentProcessor : public PaymentProcessor {
+public:
+    bool processPayment(double amount, const string& currency) override {
+        cout << "Modern: Processing " << amount << " " << currency << "\n";
+        return true;
+    }
+};
+
+class CheckoutService {
+    PaymentProcessor& processor;
+public:
+    CheckoutService(PaymentProcessor& p) : processor(p) {}
+    void checkout(double amount, const string& currency = "USD") {
+        bool ok = processor.processPayment(amount, currency);
+        cout << "Checkout " << (ok ? "succeeded" : "failed") << " for " << amount << "\n";
+    }
+};
+
+int main() {
+    LegacyGateway legacy;
+    LegacyGatewayAdapter adapter(legacy);
+    CheckoutService(adapter).checkout(29.99);
+
+    ModernPaymentProcessor modern;
+    CheckoutService(modern).checkout(49.99);
+}`,
+      typescript: `interface PaymentProcessor {
+  processPayment(amount: number, currency: string): boolean;
+}
+
+class LegacyGateway {
+  makePayment(amountCents: number, currencyCode: string): number {
+    console.log(\`Legacy: Processing \${amountCents} cents in \${currencyCode}\`);
+    return 0; // 0=success
+  }
+}
+
+class LegacyGatewayAdapter implements PaymentProcessor {
+  constructor(private legacy: LegacyGateway) {}
+  processPayment(amount: number, currency: string): boolean {
+    const cents = Math.round(amount * 100);
+    return this.legacy.makePayment(cents, currency.toUpperCase()) === 0;
+  }
+}
+
+class ModernPaymentProcessor implements PaymentProcessor {
+  processPayment(amount: number, currency: string): boolean {
+    console.log(\`Modern: Processing \${amount.toFixed(2)} \${currency}\`);
+    return true;
+  }
+}
+
+class CheckoutService {
+  constructor(private processor: PaymentProcessor) {}
+  checkout(amount: number, currency = 'USD'): void {
+    const ok = this.processor.processPayment(amount, currency);
+    console.log(\`Checkout \${ok ? 'succeeded' : 'failed'} for \${amount.toFixed(2)}\`);
+  }
+}
+
+const legacy = new LegacyGateway();
+new CheckoutService(new LegacyGatewayAdapter(legacy)).checkout(29.99);
+new CheckoutService(new ModernPaymentProcessor()).checkout(49.99);`,
+    },
   },
   {
     id: 'bridge',
@@ -605,25 +1408,22 @@ service2.checkout(49.99)`,
       'Code may become more complicated for highly cohesive classes',
       'Can be overkill for simple scenarios',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 
 
-# Implementation interface
 class Renderer(ABC):
     @abstractmethod
     def render_circle(self, x: float, y: float, radius: float) -> str:
         pass
-
     @abstractmethod
     def render_rectangle(self, x: float, y: float, width: float, height: float) -> str:
         pass
 
 
-# Concrete Implementations
 class VectorRenderer(Renderer):
     def render_circle(self, x, y, radius) -> str:
         return f"Vector: Circle at ({x},{y}) r={radius}"
-
     def render_rectangle(self, x, y, width, height) -> str:
         return f"Vector: Rect at ({x},{y}) {width}x{height}"
 
@@ -631,34 +1431,27 @@ class VectorRenderer(Renderer):
 class RasterRenderer(Renderer):
     def render_circle(self, x, y, radius) -> str:
         return f"Raster: Drawing {int(radius*2)}px circle at ({x},{y})"
-
     def render_rectangle(self, x, y, width, height) -> str:
         return f"Raster: Drawing {int(width)}x{int(height)}px rect at ({x},{y})"
 
 
-# Abstraction
 class Shape(ABC):
     def __init__(self, renderer: Renderer):
-        self.renderer = renderer  # Bridge to implementation
-
+        self.renderer = renderer
     @abstractmethod
     def draw(self) -> str:
         pass
-
     @abstractmethod
     def resize(self, factor: float):
         pass
 
 
-# Refined Abstractions
 class Circle(Shape):
     def __init__(self, renderer: Renderer, x: float, y: float, radius: float):
         super().__init__(renderer)
         self.x, self.y, self.radius = x, y, radius
-
     def draw(self) -> str:
         return self.renderer.render_circle(self.x, self.y, self.radius)
-
     def resize(self, factor: float):
         self.radius *= factor
 
@@ -667,28 +1460,176 @@ class Rectangle(Shape):
     def __init__(self, renderer: Renderer, x: float, y: float, w: float, h: float):
         super().__init__(renderer)
         self.x, self.y, self.w, self.h = x, y, w, h
-
     def draw(self) -> str:
         return self.renderer.render_rectangle(self.x, self.y, self.w, self.h)
-
     def resize(self, factor: float):
-        self.w *= factor
-        self.h *= factor
+        self.w *= factor; self.h *= factor
 
 
-# Usage - mix and match abstraction with implementation
 vector = VectorRenderer()
 raster = RasterRenderer()
-
-# Same shape, different renderers
 c1 = Circle(vector, 0, 0, 50)
 c2 = Circle(raster, 0, 0, 50)
 print(c1.draw())  # Vector: Circle at (0,0) r=50
 print(c2.draw())  # Raster: Drawing 100px circle at (0,0)
-
-# Switch renderer at runtime
 c1.renderer = raster
 print(c1.draw())  # Now uses raster`,
+      java: `interface Renderer {
+    String renderCircle(double x, double y, double radius);
+    String renderRectangle(double x, double y, double w, double h);
+}
+
+class VectorRenderer implements Renderer {
+    public String renderCircle(double x, double y, double r) {
+        return "Vector: Circle at (" + x + "," + y + ") r=" + r;
+    }
+    public String renderRectangle(double x, double y, double w, double h) {
+        return "Vector: Rect at (" + x + "," + y + ") " + w + "x" + h;
+    }
+}
+
+class RasterRenderer implements Renderer {
+    public String renderCircle(double x, double y, double r) {
+        return "Raster: Drawing " + (int)(r*2) + "px circle at (" + x + "," + y + ")";
+    }
+    public String renderRectangle(double x, double y, double w, double h) {
+        return "Raster: Drawing " + (int)w + "x" + (int)h + "px rect at (" + x + "," + y + ")";
+    }
+}
+
+abstract class Shape {
+    protected Renderer renderer;
+    Shape(Renderer renderer) { this.renderer = renderer; }
+    public abstract String draw();
+    public abstract void resize(double factor);
+}
+
+class Circle extends Shape {
+    double x, y, radius;
+    Circle(Renderer r, double x, double y, double radius) { super(r); this.x=x; this.y=y; this.radius=radius; }
+    public String draw() { return renderer.renderCircle(x, y, radius); }
+    public void resize(double factor) { radius *= factor; }
+}
+
+class RectangleShape extends Shape {
+    double x, y, w, h;
+    RectangleShape(Renderer r, double x, double y, double w, double h) { super(r); this.x=x; this.y=y; this.w=w; this.h=h; }
+    public String draw() { return renderer.renderRectangle(x, y, w, h); }
+    public void resize(double f) { w*=f; h*=f; }
+
+    public static void main(String[] args) {
+        VectorRenderer vector = new VectorRenderer();
+        RasterRenderer raster = new RasterRenderer();
+        Circle c1 = new Circle(vector, 0, 0, 50);
+        Circle c2 = new Circle(raster, 0, 0, 50);
+        System.out.println(c1.draw());
+        System.out.println(c2.draw());
+        c1.renderer = raster;
+        System.out.println(c1.draw());  // now raster
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+#include <memory>
+using namespace std;
+
+class Renderer {
+public:
+    virtual string renderCircle(double x, double y, double r) = 0;
+    virtual string renderRectangle(double x, double y, double w, double h) = 0;
+    virtual ~Renderer() = default;
+};
+
+class VectorRenderer : public Renderer {
+public:
+    string renderCircle(double x, double y, double r) override {
+        return "Vector: Circle at (" + to_string(x) + "," + to_string(y) + ") r=" + to_string(r);
+    }
+    string renderRectangle(double x, double y, double w, double h) override {
+        return "Vector: Rect at (" + to_string(x) + "," + to_string(y) + ") " + to_string(w) + "x" + to_string(h);
+    }
+};
+
+class RasterRenderer : public Renderer {
+public:
+    string renderCircle(double x, double y, double r) override {
+        return "Raster: " + to_string((int)(r*2)) + "px circle at (" + to_string(x) + "," + to_string(y) + ")";
+    }
+    string renderRectangle(double x, double y, double w, double h) override {
+        return "Raster: " + to_string((int)w) + "x" + to_string((int)h) + "px rect";
+    }
+};
+
+class Shape {
+protected:
+    Renderer* renderer;
+public:
+    Shape(Renderer* r) : renderer(r) {}
+    virtual string draw() = 0;
+    virtual ~Shape() = default;
+};
+
+class Circle : public Shape {
+    double x, y, radius;
+public:
+    Circle(Renderer* r, double x, double y, double rad) : Shape(r), x(x), y(y), radius(rad) {}
+    string draw() override { return renderer->renderCircle(x, y, radius); }
+};
+
+int main() {
+    VectorRenderer vec;
+    RasterRenderer ras;
+    Circle c1(&vec, 0, 0, 50);
+    Circle c2(&ras, 0, 0, 50);
+    cout << c1.draw() << "\n";
+    cout << c2.draw() << "\n";
+}`,
+      typescript: `interface Renderer {
+  renderCircle(x: number, y: number, radius: number): string;
+  renderRectangle(x: number, y: number, w: number, h: number): string;
+}
+
+class VectorRenderer implements Renderer {
+  renderCircle(x: number, y: number, r: number): string {
+    return \`Vector: Circle at (\${x},\${y}) r=\${r}\`;
+  }
+  renderRectangle(x: number, y: number, w: number, h: number): string {
+    return \`Vector: Rect at (\${x},\${y}) \${w}x\${h}\`;
+  }
+}
+
+class RasterRenderer implements Renderer {
+  renderCircle(x: number, y: number, r: number): string {
+    return \`Raster: Drawing \${r * 2}px circle at (\${x},\${y})\`;
+  }
+  renderRectangle(x: number, y: number, w: number, h: number): string {
+    return \`Raster: Drawing \${w}x\${h}px rect at (\${x},\${y})\`;
+  }
+}
+
+abstract class Shape {
+  constructor(public renderer: Renderer) {}
+  abstract draw(): string;
+  abstract resize(factor: number): void;
+}
+
+class Circle extends Shape {
+  constructor(renderer: Renderer, public x: number, public y: number, public radius: number) {
+    super(renderer);
+  }
+  draw(): string { return this.renderer.renderCircle(this.x, this.y, this.radius); }
+  resize(factor: number): void { this.radius *= factor; }
+}
+
+const vector = new VectorRenderer();
+const raster = new RasterRenderer();
+const c1 = new Circle(vector, 0, 0, 50);
+const c2 = new Circle(raster, 0, 0, 50);
+console.log(c1.draw());  // Vector: Circle at (0,0) r=50
+console.log(c2.draw());  // Raster: Drawing 100px circle at (0,0)
+c1.renderer = raster;
+console.log(c1.draw());  // Now uses raster`,
+    },
   },
   {
     id: 'composite',
@@ -713,13 +1654,12 @@ print(c1.draw())  # Now uses raster`,
       'Hard to provide a common interface for classes with very different functionality',
       'May make the design overly general',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from typing import List
 
 
 class FileSystemItem(ABC):
-    """Component interface"""
-
     def __init__(self, name: str):
         self.name = name
 
@@ -733,8 +1673,6 @@ class FileSystemItem(ABC):
 
 
 class File(FileSystemItem):
-    """Leaf node"""
-
     def __init__(self, name: str, size: int):
         super().__init__(name)
         self.size = size
@@ -743,12 +1681,10 @@ class File(FileSystemItem):
         return self.size
 
     def display(self, indent: int = 0) -> str:
-        return " " * indent + f"📄 {self.name} ({self.size} bytes)"
+        return " " * indent + f"[F] {self.name} ({self.size} bytes)"
 
 
 class Folder(FileSystemItem):
-    """Composite node"""
-
     def __init__(self, name: str):
         super().__init__(name)
         self.children: List[FileSystemItem] = []
@@ -756,34 +1692,167 @@ class Folder(FileSystemItem):
     def add(self, item: FileSystemItem):
         self.children.append(item)
 
-    def remove(self, item: FileSystemItem):
-        self.children.remove(item)
-
     def get_size(self) -> int:
         return sum(child.get_size() for child in self.children)
 
     def display(self, indent: int = 0) -> str:
-        lines = [" " * indent + f"📁 {self.name}/"]
+        lines = [" " * indent + f"[D] {self.name}/"]
         for child in self.children:
             lines.append(child.display(indent + 2))
         return "\\n".join(lines)
 
 
-# Usage - client treats files and folders uniformly
 root = Folder("root")
 src = Folder("src")
 tests = Folder("tests")
-
 src.add(File("main.py", 1024))
 src.add(File("utils.py", 512))
 tests.add(File("test_main.py", 768))
-
 root.add(src)
 root.add(tests)
 root.add(File("README.md", 2048))
-
 print(root.display())
 print(f"\\nTotal size: {root.get_size()} bytes")`,
+      java: `import java.util.ArrayList;
+import java.util.List;
+
+abstract class FileSystemItem {
+    protected String name;
+    FileSystemItem(String name) { this.name = name; }
+    public abstract int getSize();
+    public abstract String display(int indent);
+}
+
+class File extends FileSystemItem {
+    private int size;
+    File(String name, int size) { super(name); this.size = size; }
+    public int getSize() { return size; }
+    public String display(int indent) {
+        return " ".repeat(indent) + "[F] " + name + " (" + size + " bytes)";
+    }
+}
+
+class Folder extends FileSystemItem {
+    private List<FileSystemItem> children = new ArrayList<>();
+    Folder(String name) { super(name); }
+    public void add(FileSystemItem item) { children.add(item); }
+    public int getSize() { return children.stream().mapToInt(FileSystemItem::getSize).sum(); }
+    public String display(int indent) {
+        StringBuilder sb = new StringBuilder(" ".repeat(indent) + "[D] " + name + "/");
+        for (FileSystemItem child : children) {
+            sb.append("\\n").append(child.display(indent + 2));
+        }
+        return sb.toString();
+    }
+
+    public static void main(String[] args) {
+        Folder root = new Folder("root");
+        Folder src = new Folder("src");
+        src.add(new File("main.java", 1024));
+        src.add(new File("utils.java", 512));
+        Folder tests = new Folder("tests");
+        tests.add(new File("MainTest.java", 768));
+        root.add(src);
+        root.add(tests);
+        root.add(new File("README.md", 2048));
+        System.out.println(root.display(0));
+        System.out.println("Total size: " + root.getSize() + " bytes");
+    }
+}`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <memory>
+#include <string>
+#include <numeric>
+using namespace std;
+
+class FileSystemItem {
+protected:
+    string name;
+public:
+    FileSystemItem(const string& n) : name(n) {}
+    virtual int getSize() const = 0;
+    virtual string display(int indent = 0) const = 0;
+    virtual ~FileSystemItem() = default;
+};
+
+class File : public FileSystemItem {
+    int size;
+public:
+    File(const string& n, int s) : FileSystemItem(n), size(s) {}
+    int getSize() const override { return size; }
+    string display(int indent = 0) const override {
+        return string(indent, ' ') + "[F] " + name + " (" + to_string(size) + " bytes)";
+    }
+};
+
+class Folder : public FileSystemItem {
+    vector<unique_ptr<FileSystemItem>> children;
+public:
+    Folder(const string& n) : FileSystemItem(n) {}
+    void add(unique_ptr<FileSystemItem> item) { children.push_back(move(item)); }
+    int getSize() const override {
+        int total = 0;
+        for (const auto& c : children) total += c->getSize();
+        return total;
+    }
+    string display(int indent = 0) const override {
+        string result = string(indent, ' ') + "[D] " + name + "/";
+        for (const auto& c : children) result += "\\n" + c->display(indent + 2);
+        return result;
+    }
+};
+
+int main() {
+    auto root = make_unique<Folder>("root");
+    auto src = make_unique<Folder>("src");
+    src->add(make_unique<File>("main.cpp", 1024));
+    src->add(make_unique<File>("utils.cpp", 512));
+    auto tests = make_unique<Folder>("tests");
+    tests->add(make_unique<File>("test_main.cpp", 768));
+    root->add(move(src));
+    root->add(move(tests));
+    root->add(make_unique<File>("README.md", 2048));
+    cout << root->display() << "\n";
+    cout << "Total size: " << root->getSize() << " bytes\n";
+}`,
+      typescript: `abstract class FileSystemItem {
+  constructor(public name: string) {}
+  abstract getSize(): number;
+  abstract display(indent?: number): string;
+}
+
+class File extends FileSystemItem {
+  constructor(name: string, private size: number) { super(name); }
+  getSize(): number { return this.size; }
+  display(indent = 0): string {
+    return ' '.repeat(indent) + \`[F] \${this.name} (\${this.size} bytes)\`;
+  }
+}
+
+class Folder extends FileSystemItem {
+  private children: FileSystemItem[] = [];
+  add(item: FileSystemItem): void { this.children.push(item); }
+  getSize(): number { return this.children.reduce((sum, c) => sum + c.getSize(), 0); }
+  display(indent = 0): string {
+    const lines = [' '.repeat(indent) + \`[D] \${this.name}/\`];
+    for (const child of this.children) lines.push(child.display(indent + 2));
+    return lines.join('\\n');
+  }
+}
+
+const root = new Folder('root');
+const src = new Folder('src');
+src.add(new File('main.ts', 1024));
+src.add(new File('utils.ts', 512));
+const tests = new Folder('tests');
+tests.add(new File('main.test.ts', 768));
+root.add(src);
+root.add(tests);
+root.add(new File('README.md', 2048));
+console.log(root.display());
+console.log(\`Total size: \${root.getSize()} bytes\`);`,
+    },
   },
   {
     id: 'decorator',
@@ -810,30 +1879,26 @@ print(f"\\nTotal size: {root.get_size()} bytes")`,
       'Hard to implement a decorator whose behavior does not depend on order',
       'Initial configuration code may look messy',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 
 
 class TextView(ABC):
-    """Component interface"""
     @abstractmethod
     def render(self) -> str:
         pass
 
 
 class PlainTextView(TextView):
-    """Concrete component"""
     def __init__(self, text: str):
         self.text = text
-
     def render(self) -> str:
         return self.text
 
 
 class TextDecorator(TextView, ABC):
-    """Base decorator"""
     def __init__(self, wrapped: TextView):
         self._wrapped = wrapped
-
     def render(self) -> str:
         return self._wrapped.render()
 
@@ -857,21 +1922,162 @@ class ColorDecorator(TextDecorator):
     def __init__(self, wrapped: TextView, color: str):
         super().__init__(wrapped)
         self.color = color
-
     def render(self) -> str:
         return f'<span style="color:{self.color}">{super().render()}</span>'
 
 
-# Usage - stack decorators dynamically
 text = PlainTextView("Hello, World!")
 bold_text = BoldDecorator(text)
 bold_italic = ItalicDecorator(bold_text)
 full_style = UnderlineDecorator(ColorDecorator(bold_italic, "blue"))
 
-print(text.render())        # Hello, World!
-print(bold_text.render())   # <b>Hello, World!</b>
-print(bold_italic.render()) # <i><b>Hello, World!</b></i>
-print(full_style.render())  # <u><span style="color:blue">...</span></u>`,
+print(text.render())         # Hello, World!
+print(bold_text.render())    # <b>Hello, World!</b>
+print(bold_italic.render())  # <i><b>Hello, World!</b></i>
+print(full_style.render())   # <u><span ...>...</span></u>`,
+      java: `interface TextView { String render(); }
+
+class PlainTextView implements TextView {
+    private String text;
+    PlainTextView(String text) { this.text = text; }
+    public String render() { return text; }
+}
+
+abstract class TextDecorator implements TextView {
+    protected TextView wrapped;
+    TextDecorator(TextView wrapped) { this.wrapped = wrapped; }
+    public String render() { return wrapped.render(); }
+}
+
+class BoldDecorator extends TextDecorator {
+    BoldDecorator(TextView w) { super(w); }
+    public String render() { return "<b>" + super.render() + "</b>"; }
+}
+
+class ItalicDecorator extends TextDecorator {
+    ItalicDecorator(TextView w) { super(w); }
+    public String render() { return "<i>" + super.render() + "</i>"; }
+}
+
+class UnderlineDecorator extends TextDecorator {
+    UnderlineDecorator(TextView w) { super(w); }
+    public String render() { return "<u>" + super.render() + "</u>"; }
+}
+
+class ColorDecorator extends TextDecorator {
+    private String color;
+    ColorDecorator(TextView w, String color) { super(w); this.color = color; }
+    public String render() { return "<span style=\\"color:" + color + "\\">" + super.render() + "</span>"; }
+}
+
+class Main {
+    public static void main(String[] args) {
+        TextView text = new PlainTextView("Hello, World!");
+        TextView bold = new BoldDecorator(text);
+        TextView boldItalic = new ItalicDecorator(bold);
+        TextView full = new UnderlineDecorator(new ColorDecorator(boldItalic, "blue"));
+        System.out.println(text.render());
+        System.out.println(bold.render());
+        System.out.println(boldItalic.render());
+        System.out.println(full.render());
+    }
+}`,
+      cpp: `#include <iostream>
+#include <memory>
+#include <string>
+using namespace std;
+
+class TextView {
+public:
+    virtual string render() const = 0;
+    virtual ~TextView() = default;
+};
+
+class PlainTextView : public TextView {
+    string text;
+public:
+    PlainTextView(const string& t) : text(t) {}
+    string render() const override { return text; }
+};
+
+class TextDecorator : public TextView {
+protected:
+    shared_ptr<TextView> wrapped;
+public:
+    TextDecorator(shared_ptr<TextView> w) : wrapped(w) {}
+    string render() const override { return wrapped->render(); }
+};
+
+class BoldDecorator : public TextDecorator {
+public:
+    BoldDecorator(shared_ptr<TextView> w) : TextDecorator(w) {}
+    string render() const override { return "<b>" + wrapped->render() + "</b>"; }
+};
+
+class ItalicDecorator : public TextDecorator {
+public:
+    ItalicDecorator(shared_ptr<TextView> w) : TextDecorator(w) {}
+    string render() const override { return "<i>" + wrapped->render() + "</i>"; }
+};
+
+class ColorDecorator : public TextDecorator {
+    string color;
+public:
+    ColorDecorator(shared_ptr<TextView> w, const string& c) : TextDecorator(w), color(c) {}
+    string render() const override {
+        return "<span style=\\"color:" + color + "\\">" + wrapped->render() + "</span>";
+    }
+};
+
+int main() {
+    auto text = make_shared<PlainTextView>("Hello, World!");
+    auto bold = make_shared<BoldDecorator>(text);
+    auto boldItalic = make_shared<ItalicDecorator>(bold);
+    auto full = make_shared<ColorDecorator>(boldItalic, "blue");
+    cout << text->render() << "\n";
+    cout << bold->render() << "\n";
+    cout << boldItalic->render() << "\n";
+    cout << full->render() << "\n";
+}`,
+      typescript: `interface TextView { render(): string; }
+
+class PlainTextView implements TextView {
+  constructor(private text: string) {}
+  render(): string { return this.text; }
+}
+
+abstract class TextDecorator implements TextView {
+  constructor(protected wrapped: TextView) {}
+  render(): string { return this.wrapped.render(); }
+}
+
+class BoldDecorator extends TextDecorator {
+  render(): string { return \`<b>\${super.render()}</b>\`; }
+}
+
+class ItalicDecorator extends TextDecorator {
+  render(): string { return \`<i>\${super.render()}</i>\`; }
+}
+
+class UnderlineDecorator extends TextDecorator {
+  render(): string { return \`<u>\${super.render()}</u>\`; }
+}
+
+class ColorDecorator extends TextDecorator {
+  constructor(wrapped: TextView, private color: string) { super(wrapped); }
+  render(): string { return \`<span style="color:\${this.color}">\${super.render()}</span>\`; }
+}
+
+const text = new PlainTextView('Hello, World!');
+const bold = new BoldDecorator(text);
+const boldItalic = new ItalicDecorator(bold);
+const full = new UnderlineDecorator(new ColorDecorator(boldItalic, 'blue'));
+
+console.log(text.render());        // Hello, World!
+console.log(bold.render());        // <b>Hello, World!</b>
+console.log(boldItalic.render());  // <i><b>Hello, World!</b></i>
+console.log(full.render());        // <u><span ...>...</span></u>`,
+    },
   },
   {
     id: 'facade',
@@ -896,38 +2102,22 @@ print(full_style.render())  # <u><span style="color:blue">...</span></u>`,
       'Facade can become a god object coupled to all classes of an app',
       'May hide useful functionality',
     ],
-    pythonCode: `# Complex subsystems
-class BuildSystem:
-    def compile(self) -> str:
-        return "Compiling source code..."
-
-    def run_tests(self) -> str:
-        return "Running unit tests... All passed!"
-
-    def package(self) -> str:
-        return "Packaging application..."
-
+    code: {
+      python: `class BuildSystem:
+    def compile(self) -> str: return "Compiling source code..."
+    def run_tests(self) -> str: return "Running unit tests... All passed!"
+    def package(self) -> str: return "Packaging application..."
 
 class VersionControlSystem:
-    def checkout(self, branch: str) -> str:
-        return f"Checking out branch: {branch}"
-
-    def tag(self, version: str) -> str:
-        return f"Creating tag: v{version}"
-
+    def checkout(self, branch: str) -> str: return f"Checking out branch: {branch}"
+    def tag(self, version: str) -> str: return f"Creating tag: v{version}"
 
 class DeploymentTarget:
-    def upload(self, artifact: str) -> str:
-        return f"Uploading {artifact} to server..."
-
-    def restart_service(self) -> str:
-        return "Restarting service... Done!"
-
-    def health_check(self) -> str:
-        return "Health check: OK"
+    def upload(self, artifact: str) -> str: return f"Uploading {artifact} to server..."
+    def restart_service(self) -> str: return "Restarting service... Done!"
+    def health_check(self) -> str: return "Health check: OK"
 
 
-# Facade - simple interface hiding complexity
 class DeploymentFacade:
     def __init__(self):
         self._build = BuildSystem()
@@ -935,7 +2125,6 @@ class DeploymentFacade:
         self._target = DeploymentTarget()
 
     def deploy(self, branch: str, version: str) -> None:
-        """Single method hiding all deployment complexity"""
         steps = [
             self._vcs.checkout(branch),
             self._build.compile(),
@@ -947,13 +2136,129 @@ class DeploymentFacade:
             self._target.health_check(),
         ]
         for step in steps:
-            print(f"  ✓ {step}")
+            print(f"  OK: {step}")
         print(f"Deployment v{version} complete!")
 
 
-# Client uses simple facade interface
 deployer = DeploymentFacade()
 deployer.deploy("main", "2.1.0")`,
+      java: `class BuildSystem {
+    String compile() { return "Compiling source code..."; }
+    String runTests() { return "Running unit tests... All passed!"; }
+    String packageApp() { return "Packaging application..."; }
+}
+
+class VersionControlSystem {
+    String checkout(String branch) { return "Checking out branch: " + branch; }
+    String tag(String version) { return "Creating tag: v" + version; }
+}
+
+class DeploymentTarget {
+    String upload(String artifact) { return "Uploading " + artifact + " to server..."; }
+    String restartService() { return "Restarting service... Done!"; }
+    String healthCheck() { return "Health check: OK"; }
+}
+
+class DeploymentFacade {
+    private final BuildSystem build = new BuildSystem();
+    private final VersionControlSystem vcs = new VersionControlSystem();
+    private final DeploymentTarget target = new DeploymentTarget();
+
+    public void deploy(String branch, String version) {
+        String[] steps = {
+            vcs.checkout(branch), build.compile(), build.runTests(), build.packageApp(),
+            vcs.tag(version), target.upload("app-" + version + ".jar"),
+            target.restartService(), target.healthCheck()
+        };
+        for (String step : steps) System.out.println("  OK: " + step);
+        System.out.println("Deployment v" + version + " complete!");
+    }
+
+    public static void main(String[] args) {
+        new DeploymentFacade().deploy("main", "2.1.0");
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+class BuildSystem {
+public:
+    string compile() { return "Compiling source code..."; }
+    string runTests() { return "Running unit tests... All passed!"; }
+    string packageApp() { return "Packaging application..."; }
+};
+
+class VersionControlSystem {
+public:
+    string checkout(const string& branch) { return "Checking out branch: " + branch; }
+    string tag(const string& version) { return "Creating tag: v" + version; }
+};
+
+class DeploymentTarget {
+public:
+    string upload(const string& artifact) { return "Uploading " + artifact + " to server..."; }
+    string restartService() { return "Restarting service... Done!"; }
+    string healthCheck() { return "Health check: OK"; }
+};
+
+class DeploymentFacade {
+    BuildSystem build;
+    VersionControlSystem vcs;
+    DeploymentTarget target;
+public:
+    void deploy(const string& branch, const string& version) {
+        string steps[] = {
+            vcs.checkout(branch), build.compile(), build.runTests(), build.packageApp(),
+            vcs.tag(version), target.upload("app-" + version + ".jar"),
+            target.restartService(), target.healthCheck()
+        };
+        for (const auto& step : steps) cout << "  OK: " << step << "\n";
+        cout << "Deployment v" << version << " complete!\n";
+    }
+};
+
+int main() {
+    DeploymentFacade deployer;
+    deployer.deploy("main", "2.1.0");
+}`,
+      typescript: `class BuildSystem {
+  compile(): string { return 'Compiling source code...'; }
+  runTests(): string { return 'Running unit tests... All passed!'; }
+  packageApp(): string { return 'Packaging application...'; }
+}
+
+class VersionControlSystem {
+  checkout(branch: string): string { return \`Checking out branch: \${branch}\`; }
+  tag(version: string): string { return \`Creating tag: v\${version}\`; }
+}
+
+class DeploymentTarget {
+  upload(artifact: string): string { return \`Uploading \${artifact} to server...\`; }
+  restartService(): string { return 'Restarting service... Done!'; }
+  healthCheck(): string { return 'Health check: OK'; }
+}
+
+class DeploymentFacade {
+  private build = new BuildSystem();
+  private vcs = new VersionControlSystem();
+  private target = new DeploymentTarget();
+
+  deploy(branch: string, version: string): void {
+    const steps = [
+      this.vcs.checkout(branch), this.build.compile(), this.build.runTests(),
+      this.build.packageApp(), this.vcs.tag(version),
+      this.target.upload(\`app-\${version}.jar\`),
+      this.target.restartService(), this.target.healthCheck(),
+    ];
+    steps.forEach(step => console.log(\`  OK: \${step}\`));
+    console.log(\`Deployment v\${version} complete!\`);
+  }
+}
+
+const deployer = new DeploymentFacade();
+deployer.deploy('main', '2.1.0');`,
+    },
   },
   {
     id: 'flyweight',
@@ -979,32 +2284,30 @@ deployer.deploy("main", "2.1.0")`,
       'Code becomes more complicated',
       'Hard to determine flyweight state vs intrinsic state',
     ],
-    pythonCode: `from typing import Dict
+    code: {
+      python: `from typing import Dict
 
 
-# Flyweight - shared intrinsic state
 class CharacterFlyweight:
     def __init__(self, char: str, font: str, size: int):
-        # Intrinsic state (shared, immutable)
-        self.char = char
+        self.char = char  # intrinsic state (shared)
         self.font = font
         self.size = size
 
     def render(self, x: int, y: int, color: str) -> str:
-        # Extrinsic state (position, color) passed in
+        # extrinsic state passed in
         return f"'{self.char}' ({self.font},{self.size}pt,{color}) at ({x},{y})"
 
 
-# Flyweight Factory
 class CharacterFlyweightFactory:
     _flyweights: Dict[str, CharacterFlyweight] = {}
 
     @classmethod
-    def get_flyweight(cls, char: str, font: str, size: int) -> CharacterFlyweight:
+    def get(cls, char: str, font: str, size: int) -> CharacterFlyweight:
         key = f"{char}_{font}_{size}"
         if key not in cls._flyweights:
             cls._flyweights[key] = CharacterFlyweight(char, font, size)
-            print(f"Creating new flyweight for '{char}'")
+            print(f"Creating flyweight for '{char}'")
         return cls._flyweights[key]
 
     @classmethod
@@ -1012,30 +2315,158 @@ class CharacterFlyweightFactory:
         return len(cls._flyweights)
 
 
-# Context - stores extrinsic state
 class CharacterGlyph:
     def __init__(self, char: str, font: str, size: int, x: int, y: int, color: str):
-        # Get shared flyweight (intrinsic state)
-        self.flyweight = CharacterFlyweightFactory.get_flyweight(char, font, size)
-        # Store extrinsic state
-        self.x = x
-        self.y = y
-        self.color = color
+        self.flyweight = CharacterFlyweightFactory.get(char, font, size)
+        self.x, self.y, self.color = x, y, color
 
     def render(self) -> str:
         return self.flyweight.render(self.x, self.y, self.color)
 
 
-# Usage - 1000 characters but only unique flyweights created
 text = "Hello World Hello World"
-glyphs = []
-for i, char in enumerate(text):
-    glyph = CharacterGlyph(char, "Arial", 12, i * 10, 0, "black")
-    glyphs.append(glyph)
-
+glyphs = [CharacterGlyph(c, "Arial", 12, i*10, 0, "black") for i, c in enumerate(text)]
 print(f"Characters: {len(glyphs)}")
 print(f"Unique flyweights: {CharacterFlyweightFactory.count()}")
 print(glyphs[0].render())`,
+      java: `import java.util.HashMap;
+import java.util.Map;
+
+class CharacterFlyweight {
+    private final char ch;
+    private final String font;
+    private final int size;
+    CharacterFlyweight(char ch, String font, int size) { this.ch=ch; this.font=font; this.size=size; }
+    String render(int x, int y, String color) {
+        return "'" + ch + "' (" + font + "," + size + "pt," + color + ") at (" + x + "," + y + ")";
+    }
+}
+
+class FlyweightFactory {
+    private static Map<String, CharacterFlyweight> cache = new HashMap<>();
+    static CharacterFlyweight get(char ch, String font, int size) {
+        String key = ch + "_" + font + "_" + size;
+        return cache.computeIfAbsent(key, k -> {
+            System.out.println("Creating flyweight for '" + ch + "'");
+            return new CharacterFlyweight(ch, font, size);
+        });
+    }
+    static int count() { return cache.size(); }
+}
+
+class CharacterGlyph {
+    private final CharacterFlyweight flyweight;
+    private final int x, y;
+    private final String color;
+    CharacterGlyph(char ch, String font, int size, int x, int y, String color) {
+        this.flyweight = FlyweightFactory.get(ch, font, size);
+        this.x=x; this.y=y; this.color=color;
+    }
+    String render() { return flyweight.render(x, y, color); }
+}
+
+class Main {
+    public static void main(String[] args) {
+        String text = "Hello World Hello World";
+        CharacterGlyph[] glyphs = new CharacterGlyph[text.length()];
+        for (int i = 0; i < text.length(); i++) {
+            glyphs[i] = new CharacterGlyph(text.charAt(i), "Arial", 12, i*10, 0, "black");
+        }
+        System.out.println("Characters: " + glyphs.length);
+        System.out.println("Unique flyweights: " + FlyweightFactory.count());
+        System.out.println(glyphs[0].render());
+    }
+}`,
+      cpp: `#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+using namespace std;
+
+class CharacterFlyweight {
+    char ch; string font; int size;
+public:
+    CharacterFlyweight(char c, const string& f, int s) : ch(c), font(f), size(s) {}
+    string render(int x, int y, const string& color) const {
+        return string("'") + ch + "' (" + font + "," + to_string(size) + "pt," +
+               color + ") at (" + to_string(x) + "," + to_string(y) + ")";
+    }
+};
+
+class FlyweightFactory {
+    static map<string, shared_ptr<CharacterFlyweight>> cache;
+public:
+    static shared_ptr<CharacterFlyweight> get(char c, const string& font, int size) {
+        string key = string(1, c) + "_" + font + "_" + to_string(size);
+        if (!cache.count(key)) {
+            cout << "Creating flyweight for '" << c << "'\n";
+            cache[key] = make_shared<CharacterFlyweight>(c, font, size);
+        }
+        return cache[key];
+    }
+    static int count() { return cache.size(); }
+};
+map<string, shared_ptr<CharacterFlyweight>> FlyweightFactory::cache;
+
+struct CharacterGlyph {
+    shared_ptr<CharacterFlyweight> fw;
+    int x, y; string color;
+    CharacterGlyph(char c, const string& font, int size, int x, int y, const string& col)
+        : fw(FlyweightFactory::get(c, font, size)), x(x), y(y), color(col) {}
+    string render() const { return fw->render(x, y, color); }
+};
+
+int main() {
+    string text = "Hello World Hello World";
+    vector<CharacterGlyph> glyphs;
+    for (int i = 0; i < (int)text.size(); i++)
+        glyphs.emplace_back(text[i], "Arial", 12, i*10, 0, "black");
+    cout << "Characters: " << glyphs.size() << "\n";
+    cout << "Unique flyweights: " << FlyweightFactory::count() << "\n";
+    cout << glyphs[0].render() << "\n";
+}`,
+      typescript: `class CharacterFlyweight {
+  constructor(
+    private readonly char: string,
+    private readonly font: string,
+    private readonly size: number
+  ) {}
+
+  render(x: number, y: number, color: string): string {
+    return \`'\${this.char}' (\${this.font},\${this.size}pt,\${color}) at (\${x},\${y})\`;
+  }
+}
+
+class FlyweightFactory {
+  private static cache = new Map<string, CharacterFlyweight>();
+
+  static get(char: string, font: string, size: number): CharacterFlyweight {
+    const key = \`\${char}_\${font}_\${size}\`;
+    if (!FlyweightFactory.cache.has(key)) {
+      console.log(\`Creating flyweight for '\${char}'\`);
+      FlyweightFactory.cache.set(key, new CharacterFlyweight(char, font, size));
+    }
+    return FlyweightFactory.cache.get(key)!;
+  }
+
+  static count(): number { return FlyweightFactory.cache.size; }
+}
+
+class CharacterGlyph {
+  private flyweight: CharacterFlyweight;
+  constructor(char: string, font: string, size: number,
+              private x: number, private y: number, private color: string) {
+    this.flyweight = FlyweightFactory.get(char, font, size);
+  }
+  render(): string { return this.flyweight.render(this.x, this.y, this.color); }
+}
+
+const text = 'Hello World Hello World';
+const glyphs = Array.from(text).map((c, i) => new CharacterGlyph(c, 'Arial', 12, i*10, 0, 'black'));
+console.log(\`Characters: \${glyphs.length}\`);
+console.log(\`Unique flyweights: \${FlyweightFactory.count()}\`);
+console.log(glyphs[0].render());`,
+    },
   },
   {
     id: 'proxy',
@@ -1062,8 +2493,9 @@ print(glyphs[0].render())`,
       'Code may become complicated',
       'Boilerplate code for delegation',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
-from typing import Dict, Optional
+    code: {
+      python: `from abc import ABC, abstractmethod
+from typing import Dict
 import time
 
 
@@ -1074,14 +2506,12 @@ class DataService(ABC):
 
 
 class RealDataService(DataService):
-    """Actual expensive service"""
     def fetch_data(self, query: str) -> dict:
         print(f"Fetching data for: {query} (slow DB call...)")
-        time.sleep(0.1)  # Simulate slow DB
+        time.sleep(0.05)
         return {"query": query, "result": f"data for {query}"}
 
 
-# Caching Proxy
 class CachedDataService(DataService):
     def __init__(self, real_service: DataService):
         self._real = real_service
@@ -1091,14 +2521,12 @@ class CachedDataService(DataService):
         if query in self._cache:
             print(f"Cache hit for: {query}")
             return self._cache[query]
-
         print(f"Cache miss for: {query}")
         result = self._real.fetch_data(query)
         self._cache[query] = result
         return result
 
 
-# Logging Proxy
 class LoggingDataService(DataService):
     def __init__(self, service: DataService):
         self._service = service
@@ -1114,14 +2542,165 @@ class LoggingDataService(DataService):
         return result
 
 
-# Usage - chain proxies
 real = RealDataService()
 cached = CachedDataService(real)
 logged = LoggingDataService(cached)
 
-logged.fetch_data("SELECT * FROM users")  # Cache miss
-logged.fetch_data("SELECT * FROM users")  # Cache hit
-logged.fetch_data("SELECT * FROM orders") # Cache miss`,
+logged.fetch_data("SELECT * FROM users")   # Cache miss
+logged.fetch_data("SELECT * FROM users")   # Cache hit
+logged.fetch_data("SELECT * FROM orders")  # Cache miss`,
+      java: `import java.util.HashMap;
+import java.util.Map;
+
+interface DataService { Map<String, String> fetchData(String query); }
+
+class RealDataService implements DataService {
+    public Map<String, String> fetchData(String query) {
+        System.out.println("Fetching data for: " + query + " (slow DB call...)");
+        Map<String, String> result = new HashMap<>();
+        result.put("query", query);
+        result.put("result", "data for " + query);
+        return result;
+    }
+}
+
+class CachedDataService implements DataService {
+    private final DataService real;
+    private final Map<String, Map<String, String>> cache = new HashMap<>();
+    CachedDataService(DataService real) { this.real = real; }
+    public Map<String, String> fetchData(String query) {
+        if (cache.containsKey(query)) {
+            System.out.println("Cache hit for: " + query);
+            return cache.get(query);
+        }
+        System.out.println("Cache miss for: " + query);
+        Map<String, String> result = real.fetchData(query);
+        cache.put(query, result);
+        return result;
+    }
+}
+
+class LoggingDataService implements DataService {
+    private final DataService service;
+    private int calls = 0;
+    LoggingDataService(DataService service) { this.service = service; }
+    public Map<String, String> fetchData(String query) {
+        System.out.println("[LOG] Call #" + (++calls) + ": fetchData('" + query + "')");
+        long start = System.currentTimeMillis();
+        Map<String, String> result = service.fetchData(query);
+        System.out.println("[LOG] Completed in " + (System.currentTimeMillis() - start) + "ms");
+        return result;
+    }
+
+    public static void main(String[] args) {
+        DataService service = new LoggingDataService(new CachedDataService(new RealDataService()));
+        service.fetchData("SELECT * FROM users");
+        service.fetchData("SELECT * FROM users");
+        service.fetchData("SELECT * FROM orders");
+    }
+}`,
+      cpp: `#include <iostream>
+#include <map>
+#include <string>
+#include <chrono>
+using namespace std;
+using Clock = chrono::high_resolution_clock;
+
+class DataService {
+public:
+    virtual map<string,string> fetchData(const string& query) = 0;
+    virtual ~DataService() = default;
+};
+
+class RealDataService : public DataService {
+public:
+    map<string,string> fetchData(const string& query) override {
+        cout << "Fetching data for: " << query << " (slow DB call...)\n";
+        return {{"query", query}, {"result", "data for " + query}};
+    }
+};
+
+class CachedDataService : public DataService {
+    DataService& real;
+    map<string, map<string,string>> cache;
+public:
+    CachedDataService(DataService& r) : real(r) {}
+    map<string,string> fetchData(const string& query) override {
+        auto it = cache.find(query);
+        if (it != cache.end()) { cout << "Cache hit for: " << query << "\n"; return it->second; }
+        cout << "Cache miss for: " << query << "\n";
+        auto result = real.fetchData(query);
+        cache[query] = result;
+        return result;
+    }
+};
+
+class LoggingDataService : public DataService {
+    DataService& service;
+    int calls = 0;
+public:
+    LoggingDataService(DataService& s) : service(s) {}
+    map<string,string> fetchData(const string& query) override {
+        cout << "[LOG] Call #" << ++calls << ": fetchData('" << query << "')\n";
+        auto start = Clock::now();
+        auto result = service.fetchData(query);
+        auto ms = chrono::duration_cast<chrono::milliseconds>(Clock::now() - start).count();
+        cout << "[LOG] Completed in " << ms << "ms\n";
+        return result;
+    }
+};
+
+int main() {
+    RealDataService real;
+    CachedDataService cached(real);
+    LoggingDataService logged(cached);
+    logged.fetchData("SELECT * FROM users");
+    logged.fetchData("SELECT * FROM users");
+    logged.fetchData("SELECT * FROM orders");
+}`,
+      typescript: `interface DataService {
+  fetchData(query: string): Record<string, string>;
+}
+
+class RealDataService implements DataService {
+  fetchData(query: string): Record<string, string> {
+    console.log(\`Fetching data for: \${query} (slow DB call...)\`);
+    return { query, result: \`data for \${query}\` };
+  }
+}
+
+class CachedDataService implements DataService {
+  private cache = new Map<string, Record<string, string>>();
+  constructor(private real: DataService) {}
+  fetchData(query: string): Record<string, string> {
+    if (this.cache.has(query)) {
+      console.log(\`Cache hit for: \${query}\`);
+      return this.cache.get(query)!;
+    }
+    console.log(\`Cache miss for: \${query}\`);
+    const result = this.real.fetchData(query);
+    this.cache.set(query, result);
+    return result;
+  }
+}
+
+class LoggingDataService implements DataService {
+  private calls = 0;
+  constructor(private service: DataService) {}
+  fetchData(query: string): Record<string, string> {
+    console.log(\`[LOG] Call #\${++this.calls}: fetchData('\${query}')\`);
+    const start = Date.now();
+    const result = this.service.fetchData(query);
+    console.log(\`[LOG] Completed in \${Date.now() - start}ms\`);
+    return result;
+  }
+}
+
+const service = new LoggingDataService(new CachedDataService(new RealDataService()));
+service.fetchData('SELECT * FROM users');
+service.fetchData('SELECT * FROM users');
+service.fetchData('SELECT * FROM orders');`,
+    },
   },
 
   // BEHAVIORAL PATTERNS
@@ -1149,20 +2728,18 @@ logged.fetch_data("SELECT * FROM orders") # Cache miss`,
       'Memory leaks if observers not properly removed',
       'Unexpected updates if not carefully designed',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from typing import List
 
 
 class FitnessDataObserver(ABC):
-    """Observer interface"""
     @abstractmethod
     def on_data_update(self, steps: int, calories: float, distance: float):
         pass
 
 
 class FitnessData:
-    """Subject - maintains state and notifies observers"""
-
     def __init__(self):
         self._observers: List[FitnessDataObserver] = []
         self._steps = 0
@@ -1176,14 +2753,14 @@ class FitnessData:
         self._observers.remove(observer)
 
     def _notify_all(self):
-        for observer in self._observers:
-            observer.on_data_update(self._steps, self._calories, self._distance)
+        for obs in self._observers:
+            obs.on_data_update(self._steps, self._calories, self._distance)
 
     def update_stats(self, steps: int, calories: float, distance: float):
         self._steps = steps
         self._calories = calories
         self._distance = distance
-        self._notify_all()  # Automatically notify all observers
+        self._notify_all()
 
 
 class LiveActivityDisplay(FitnessDataObserver):
@@ -1194,30 +2771,154 @@ class LiveActivityDisplay(FitnessDataObserver):
 class GoalNotifier(FitnessDataObserver):
     def __init__(self, step_goal: int):
         self.step_goal = step_goal
-
     def on_data_update(self, steps: int, calories: float, distance: float):
         if steps >= self.step_goal:
-            print(f"[Goal] Congratulations! You reached {steps}/{self.step_goal} steps!")
+            print(f"[Goal] Reached {steps}/{self.step_goal} steps!")
 
 
-class ProgressLogger(FitnessDataObserver):
-    def on_data_update(self, steps: int, calories: float, distance: float):
-        print(f"[Log] Activity recorded: {steps} steps, {calories:.1f} cal, {distance:.2f}km")
-
-
-# Usage
 fitness = FitnessData()
-display = LiveActivityDisplay()
-goal = GoalNotifier(10000)
-logger = ProgressLogger()
-
-fitness.register(display)
-fitness.register(goal)
-fitness.register(logger)
-
+fitness.register(LiveActivityDisplay())
+fitness.register(GoalNotifier(10000))
 fitness.update_stats(5000, 250.5, 3.5)
 print("---")
 fitness.update_stats(10500, 525.0, 7.3)`,
+      java: `import java.util.ArrayList;
+import java.util.List;
+
+interface FitnessObserver {
+    void onDataUpdate(int steps, double calories, double distance);
+}
+
+class FitnessData {
+    private List<FitnessObserver> observers = new ArrayList<>();
+    private int steps; private double calories, distance;
+
+    public void register(FitnessObserver obs) { observers.add(obs); }
+    public void unregister(FitnessObserver obs) { observers.remove(obs); }
+
+    public void updateStats(int steps, double calories, double distance) {
+        this.steps = steps; this.calories = calories; this.distance = distance;
+        for (FitnessObserver obs : observers) obs.onDataUpdate(steps, calories, distance);
+    }
+}
+
+class LiveActivityDisplay implements FitnessObserver {
+    public void onDataUpdate(int steps, double calories, double distance) {
+        System.out.printf("[Display] Steps: %d | Calories: %.1f | Distance: %.2fkm%n",
+            steps, calories, distance);
+    }
+}
+
+class GoalNotifier implements FitnessObserver {
+    private final int stepGoal;
+    GoalNotifier(int goal) { this.stepGoal = goal; }
+    public void onDataUpdate(int steps, double cal, double dist) {
+        if (steps >= stepGoal)
+            System.out.println("[Goal] Reached " + steps + "/" + stepGoal + " steps!");
+    }
+}
+
+class Main {
+    public static void main(String[] args) {
+        FitnessData fitness = new FitnessData();
+        fitness.register(new LiveActivityDisplay());
+        fitness.register(new GoalNotifier(10000));
+        fitness.updateStats(5000, 250.5, 3.5);
+        System.out.println("---");
+        fitness.updateStats(10500, 525.0, 7.3);
+    }
+}`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+class FitnessObserver {
+public:
+    virtual void onDataUpdate(int steps, double calories, double distance) = 0;
+    virtual ~FitnessObserver() = default;
+};
+
+class FitnessData {
+    vector<FitnessObserver*> observers;
+    int steps = 0; double calories = 0, distance = 0;
+public:
+    void subscribe(FitnessObserver* obs) { observers.push_back(obs); }
+    void unsubscribe(FitnessObserver* obs) {
+        observers.erase(remove(observers.begin(), observers.end(), obs), observers.end());
+    }
+    void updateStats(int s, double cal, double dist) {
+        steps=s; calories=cal; distance=dist;
+        for (auto* obs : observers) obs->onDataUpdate(steps, calories, distance);
+    }
+};
+
+class LiveActivityDisplay : public FitnessObserver {
+public:
+    void onDataUpdate(int steps, double cal, double dist) override {
+        cout << "[Display] Steps: " << steps << " | Calories: " << cal
+             << " | Distance: " << dist << "km\n";
+    }
+};
+
+class GoalNotifier : public FitnessObserver {
+    int goal;
+public:
+    GoalNotifier(int g) : goal(g) {}
+    void onDataUpdate(int steps, double, double) override {
+        if (steps >= goal) cout << "[Goal] Reached " << steps << "/" << goal << " steps!\n";
+    }
+};
+
+int main() {
+    FitnessData fitness;
+    LiveActivityDisplay display;
+    GoalNotifier goal(10000);
+    fitness.subscribe(&display);
+    fitness.subscribe(&goal);
+    fitness.updateStats(5000, 250.5, 3.5);
+    cout << "---\n";
+    fitness.updateStats(10500, 525.0, 7.3);
+}`,
+      typescript: `interface FitnessObserver {
+  onDataUpdate(steps: number, calories: number, distance: number): void;
+}
+
+class FitnessData {
+  private observers: FitnessObserver[] = [];
+  private steps = 0; private calories = 0; private distance = 0;
+
+  register(obs: FitnessObserver): void { this.observers.push(obs); }
+  unregister(obs: FitnessObserver): void {
+    this.observers = this.observers.filter(o => o !== obs);
+  }
+
+  updateStats(steps: number, calories: number, distance: number): void {
+    this.steps = steps; this.calories = calories; this.distance = distance;
+    this.observers.forEach(obs => obs.onDataUpdate(steps, calories, distance));
+  }
+}
+
+class LiveActivityDisplay implements FitnessObserver {
+  onDataUpdate(steps: number, calories: number, distance: number): void {
+    console.log(\`[Display] Steps: \${steps} | Calories: \${calories.toFixed(1)} | Distance: \${distance.toFixed(2)}km\`);
+  }
+}
+
+class GoalNotifier implements FitnessObserver {
+  constructor(private stepGoal: number) {}
+  onDataUpdate(steps: number): void {
+    if (steps >= this.stepGoal) console.log(\`[Goal] Reached \${steps}/\${this.stepGoal} steps!\`);
+  }
+}
+
+const fitness = new FitnessData();
+fitness.register(new LiveActivityDisplay());
+fitness.register(new GoalNotifier(10000));
+fitness.updateStats(5000, 250.5, 3.5);
+console.log('---');
+fitness.updateStats(10500, 525.0, 7.3);`,
+    },
   },
   {
     id: 'strategy',
@@ -1244,7 +2945,8 @@ fitness.update_stats(10500, 525.0, 7.3)`,
       'Many modern languages have functional support (lambdas) that can replace simple strategies',
       'Overhead of strategy selection',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
 
@@ -1252,17 +2954,15 @@ from typing import List
 @dataclass
 class Order:
     items: List[str]
-    weight: float  # kg
-    total_value: float  # USD
+    weight: float
+    total_value: float
     destination: str
 
 
 class ShippingStrategy(ABC):
-    """Strategy interface"""
     @abstractmethod
     def calculate_cost(self, order: Order) -> float:
         pass
-
     @abstractmethod
     def name(self) -> str:
         pass
@@ -1271,10 +2971,8 @@ class ShippingStrategy(ABC):
 class FlatRateShipping(ShippingStrategy):
     def __init__(self, rate: float = 5.99):
         self.rate = rate
-
     def calculate_cost(self, order: Order) -> float:
         return self.rate
-
     def name(self) -> str:
         return "Flat Rate"
 
@@ -1282,10 +2980,8 @@ class FlatRateShipping(ShippingStrategy):
 class WeightBasedShipping(ShippingStrategy):
     def __init__(self, rate_per_kg: float = 2.5):
         self.rate_per_kg = rate_per_kg
-
     def calculate_cost(self, order: Order) -> float:
         return order.weight * self.rate_per_kg
-
     def name(self) -> str:
         return "Weight Based"
 
@@ -1293,41 +2989,194 @@ class WeightBasedShipping(ShippingStrategy):
 class FreeShipping(ShippingStrategy):
     def __init__(self, min_order_value: float = 50.0):
         self.min_value = min_order_value
-
     def calculate_cost(self, order: Order) -> float:
-        if order.total_value >= self.min_value:
-            return 0.0
-        return 9.99  # Fallback if below minimum
-
+        return 0.0 if order.total_value >= self.min_value else 9.99
     def name(self) -> str:
         return "Free Shipping (if eligible)"
 
 
 class ShippingCostService:
-    """Context class"""
     def __init__(self, strategy: ShippingStrategy):
         self._strategy = strategy
-
     def set_strategy(self, strategy: ShippingStrategy):
-        """Switch strategy at runtime"""
         self._strategy = strategy
-
-    def calculate_shipping_cost(self, order: Order) -> float:
+    def calculate(self, order: Order) -> float:
         cost = self._strategy.calculate_cost(order)
-        print(f"{self._strategy.name()}: {cost:.2f}")
+        print(f"{self._strategy.name()}: \${cost:.2f}")
         return cost
 
 
-# Usage
 order = Order(["laptop", "mouse"], weight=2.5, total_value=799.99, destination="NYC")
 service = ShippingCostService(FlatRateShipping())
-service.calculate_shipping_cost(order)  # Flat Rate: $5.99
-
+service.calculate(order)
 service.set_strategy(WeightBasedShipping())
-service.calculate_shipping_cost(order)  # Weight Based: $6.25
-
+service.calculate(order)
 service.set_strategy(FreeShipping(min_order_value=500))
-service.calculate_shipping_cost(order)  # Free Shipping: $0.00`,
+service.calculate(order)`,
+      java: `class Order {
+    String[] items; double weight, totalValue; String destination;
+    Order(String[] items, double weight, double totalValue, String destination) {
+        this.items=items; this.weight=weight; this.totalValue=totalValue; this.destination=destination;
+    }
+}
+
+interface ShippingStrategy {
+    double calculateCost(Order order);
+    String getName();
+}
+
+class FlatRateShipping implements ShippingStrategy {
+    private double rate;
+    FlatRateShipping(double rate) { this.rate = rate; }
+    public double calculateCost(Order o) { return rate; }
+    public String getName() { return "Flat Rate"; }
+}
+
+class WeightBasedShipping implements ShippingStrategy {
+    private double ratePerKg;
+    WeightBasedShipping(double ratePerKg) { this.ratePerKg = ratePerKg; }
+    public double calculateCost(Order o) { return o.weight * ratePerKg; }
+    public String getName() { return "Weight Based"; }
+}
+
+class FreeShipping implements ShippingStrategy {
+    private double minValue;
+    FreeShipping(double minValue) { this.minValue = minValue; }
+    public double calculateCost(Order o) { return o.totalValue >= minValue ? 0.0 : 9.99; }
+    public String getName() { return "Free Shipping (if eligible)"; }
+}
+
+class ShippingCostService {
+    private ShippingStrategy strategy;
+    ShippingCostService(ShippingStrategy strategy) { this.strategy = strategy; }
+    void setStrategy(ShippingStrategy s) { this.strategy = s; }
+    double calculate(Order order) {
+        double cost = strategy.calculateCost(order);
+        System.out.printf("%s: $%.2f%n", strategy.getName(), cost);
+        return cost;
+    }
+
+    public static void main(String[] args) {
+        Order order = new Order(new String[]{"laptop"}, 2.5, 799.99, "NYC");
+        ShippingCostService svc = new ShippingCostService(new FlatRateShipping(5.99));
+        svc.calculate(order);
+        svc.setStrategy(new WeightBasedShipping(2.5));
+        svc.calculate(order);
+        svc.setStrategy(new FreeShipping(500));
+        svc.calculate(order);
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+struct Order {
+    string items; double weight, totalValue; string destination;
+};
+
+class ShippingStrategy {
+public:
+    virtual double calculateCost(const Order& o) = 0;
+    virtual string getName() = 0;
+    virtual ~ShippingStrategy() = default;
+};
+
+class FlatRateShipping : public ShippingStrategy {
+    double rate;
+public:
+    FlatRateShipping(double r = 5.99) : rate(r) {}
+    double calculateCost(const Order&) override { return rate; }
+    string getName() override { return "Flat Rate"; }
+};
+
+class WeightBasedShipping : public ShippingStrategy {
+    double ratePerKg;
+public:
+    WeightBasedShipping(double r = 2.5) : ratePerKg(r) {}
+    double calculateCost(const Order& o) override { return o.weight * ratePerKg; }
+    string getName() override { return "Weight Based"; }
+};
+
+class FreeShipping : public ShippingStrategy {
+    double minValue;
+public:
+    FreeShipping(double min = 50.0) : minValue(min) {}
+    double calculateCost(const Order& o) override { return o.totalValue >= minValue ? 0.0 : 9.99; }
+    string getName() override { return "Free Shipping (if eligible)"; }
+};
+
+class ShippingCostService {
+    ShippingStrategy* strategy;
+public:
+    ShippingCostService(ShippingStrategy* s) : strategy(s) {}
+    void setStrategy(ShippingStrategy* s) { strategy = s; }
+    double calculate(const Order& order) {
+        double cost = strategy->calculateCost(order);
+        cout << strategy->getName() << ": $" << cost << "\n";
+        return cost;
+    }
+};
+
+int main() {
+    Order order{"laptop", 2.5, 799.99, "NYC"};
+    FlatRateShipping flat;
+    WeightBasedShipping weight;
+    FreeShipping free(500);
+    ShippingCostService svc(&flat);
+    svc.calculate(order);
+    svc.setStrategy(&weight);
+    svc.calculate(order);
+    svc.setStrategy(&free);
+    svc.calculate(order);
+}`,
+      typescript: `interface Order {
+  items: string[];
+  weight: number;
+  totalValue: number;
+  destination: string;
+}
+
+interface ShippingStrategy {
+  calculateCost(order: Order): number;
+  name(): string;
+}
+
+class FlatRateShipping implements ShippingStrategy {
+  constructor(private rate = 5.99) {}
+  calculateCost(_order: Order): number { return this.rate; }
+  name(): string { return 'Flat Rate'; }
+}
+
+class WeightBasedShipping implements ShippingStrategy {
+  constructor(private ratePerKg = 2.5) {}
+  calculateCost(order: Order): number { return order.weight * this.ratePerKg; }
+  name(): string { return 'Weight Based'; }
+}
+
+class FreeShipping implements ShippingStrategy {
+  constructor(private minValue = 50) {}
+  calculateCost(order: Order): number { return order.totalValue >= this.minValue ? 0 : 9.99; }
+  name(): string { return 'Free Shipping (if eligible)'; }
+}
+
+class ShippingCostService {
+  constructor(private strategy: ShippingStrategy) {}
+  setStrategy(s: ShippingStrategy): void { this.strategy = s; }
+  calculate(order: Order): number {
+    const cost = this.strategy.calculateCost(order);
+    console.log(\`\${this.strategy.name()}: \$\${cost.toFixed(2)}\`);
+    return cost;
+  }
+}
+
+const order: Order = { items: ['laptop', 'mouse'], weight: 2.5, totalValue: 799.99, destination: 'NYC' };
+const svc = new ShippingCostService(new FlatRateShipping());
+svc.calculate(order);
+svc.setStrategy(new WeightBasedShipping());
+svc.calculate(order);
+svc.setStrategy(new FreeShipping(500));
+svc.calculate(order);`,
+    },
   },
   {
     id: 'command',
@@ -1354,7 +3203,8 @@ service.calculate_shipping_cost(order)  # Free Shipping: $0.00`,
       'Code may become more complicated with many command classes',
       'Higher number of classes for each command',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from typing import List
 
 
@@ -1362,7 +3212,6 @@ class Command(ABC):
     @abstractmethod
     def execute(self) -> str:
         pass
-
     @abstractmethod
     def undo(self) -> str:
         pass
@@ -1372,7 +3221,6 @@ class Light:
     def __init__(self, name: str):
         self.name = name
         self.on = False
-        self.brightness = 100
 
     def turn_on(self):
         self.on = True
@@ -1382,18 +3230,12 @@ class Light:
         self.on = False
         return f"{self.name} is OFF"
 
-    def dim(self, level: int):
-        self.brightness = level
-        return f"{self.name} dimmed to {level}%"
-
 
 class LightOnCommand(Command):
     def __init__(self, light: Light):
         self.light = light
-
     def execute(self) -> str:
         return self.light.turn_on()
-
     def undo(self) -> str:
         return self.light.turn_off()
 
@@ -1401,16 +3243,13 @@ class LightOnCommand(Command):
 class LightOffCommand(Command):
     def __init__(self, light: Light):
         self.light = light
-
     def execute(self) -> str:
         return self.light.turn_off()
-
     def undo(self) -> str:
         return self.light.turn_on()
 
 
 class RemoteControl:
-    """Invoker - stores and executes commands"""
     def __init__(self):
         self._history: List[Command] = []
 
@@ -1421,37 +3260,196 @@ class RemoteControl:
 
     def undo_last(self):
         if self._history:
-            command = self._history.pop()
-            result = command.undo()
+            result = self._history.pop().undo()
             print(f"Undone: {result}")
 
 
-# Macro command (composite)
 class MacroCommand(Command):
     def __init__(self, commands: List[Command]):
         self.commands = commands
-
     def execute(self) -> str:
-        results = [cmd.execute() for cmd in self.commands]
-        return " | ".join(results)
-
+        return " | ".join(cmd.execute() for cmd in self.commands)
     def undo(self) -> str:
-        results = [cmd.undo() for cmd in reversed(self.commands)]
-        return " | ".join(results)
+        return " | ".join(cmd.undo() for cmd in reversed(self.commands))
 
 
-# Usage
 living_room = Light("Living Room")
 kitchen = Light("Kitchen")
 remote = RemoteControl()
-
 remote.execute(LightOnCommand(living_room))
 remote.execute(LightOnCommand(kitchen))
-remote.undo_last()  # Undo kitchen light
-
-# Macro - turn on all lights at once
+remote.undo_last()
 all_on = MacroCommand([LightOnCommand(living_room), LightOnCommand(kitchen)])
 remote.execute(all_on)`,
+      java: `import java.util.ArrayList;
+import java.util.List;
+
+interface Command { String execute(); String undo(); }
+
+class Light {
+    private String name; private boolean on;
+    Light(String name) { this.name = name; }
+    String turnOn() { on = true; return name + " is ON"; }
+    String turnOff() { on = false; return name + " is OFF"; }
+}
+
+class LightOnCommand implements Command {
+    private final Light light;
+    LightOnCommand(Light light) { this.light = light; }
+    public String execute() { return light.turnOn(); }
+    public String undo() { return light.turnOff(); }
+}
+
+class LightOffCommand implements Command {
+    private final Light light;
+    LightOffCommand(Light light) { this.light = light; }
+    public String execute() { return light.turnOff(); }
+    public String undo() { return light.turnOn(); }
+}
+
+class RemoteControl {
+    private List<Command> history = new ArrayList<>();
+    void execute(Command cmd) {
+        System.out.println("Executed: " + cmd.execute());
+        history.add(cmd);
+    }
+    void undoLast() {
+        if (!history.isEmpty()) {
+            System.out.println("Undone: " + history.remove(history.size()-1).undo());
+        }
+    }
+}
+
+class MacroCommand implements Command {
+    private List<Command> commands;
+    MacroCommand(List<Command> cmds) { this.commands = cmds; }
+    public String execute() {
+        StringBuilder sb = new StringBuilder();
+        for (Command c : commands) { if (sb.length() > 0) sb.append(" | "); sb.append(c.execute()); }
+        return sb.toString();
+    }
+    public String undo() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = commands.size()-1; i >= 0; i--) { if (sb.length() > 0) sb.append(" | "); sb.append(commands.get(i).undo()); }
+        return sb.toString();
+    }
+
+    public static void main(String[] args) {
+        Light livingRoom = new Light("Living Room"), kitchen = new Light("Kitchen");
+        RemoteControl remote = new RemoteControl();
+        remote.execute(new LightOnCommand(livingRoom));
+        remote.execute(new LightOnCommand(kitchen));
+        remote.undoLast();
+        remote.execute(new MacroCommand(List.of(new LightOnCommand(livingRoom), new LightOnCommand(kitchen))));
+    }
+}`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <memory>
+#include <string>
+using namespace std;
+
+class Command {
+public:
+    virtual string execute() = 0;
+    virtual string undo() = 0;
+    virtual ~Command() = default;
+};
+
+class Light {
+    string name; bool on = false;
+public:
+    Light(const string& n) : name(n) {}
+    string turnOn() { on=true; return name + " is ON"; }
+    string turnOff() { on=false; return name + " is OFF"; }
+};
+
+class LightOnCommand : public Command {
+    Light& light;
+public:
+    LightOnCommand(Light& l) : light(l) {}
+    string execute() override { return light.turnOn(); }
+    string undo() override { return light.turnOff(); }
+};
+
+class LightOffCommand : public Command {
+    Light& light;
+public:
+    LightOffCommand(Light& l) : light(l) {}
+    string execute() override { return light.turnOff(); }
+    string undo() override { return light.turnOn(); }
+};
+
+class RemoteControl {
+    vector<Command*> history;
+public:
+    void execute(Command* cmd) {
+        cout << "Executed: " << cmd->execute() << "\n";
+        history.push_back(cmd);
+    }
+    void undoLast() {
+        if (!history.empty()) {
+            cout << "Undone: " << history.back()->undo() << "\n";
+            history.pop_back();
+        }
+    }
+};
+
+int main() {
+    Light livingRoom("Living Room"), kitchen("Kitchen");
+    LightOnCommand onLiving(livingRoom), onKitchen(kitchen);
+    RemoteControl remote;
+    remote.execute(&onLiving);
+    remote.execute(&onKitchen);
+    remote.undoLast();
+}`,
+      typescript: `interface Command { execute(): string; undo(): string; }
+
+class Light {
+  private on = false;
+  constructor(public name: string) {}
+  turnOn(): string { this.on = true; return \`\${this.name} is ON\`; }
+  turnOff(): string { this.on = false; return \`\${this.name} is OFF\`; }
+}
+
+class LightOnCommand implements Command {
+  constructor(private light: Light) {}
+  execute(): string { return this.light.turnOn(); }
+  undo(): string { return this.light.turnOff(); }
+}
+
+class LightOffCommand implements Command {
+  constructor(private light: Light) {}
+  execute(): string { return this.light.turnOff(); }
+  undo(): string { return this.light.turnOn(); }
+}
+
+class RemoteControl {
+  private history: Command[] = [];
+  execute(cmd: Command): void {
+    console.log(\`Executed: \${cmd.execute()}\`);
+    this.history.push(cmd);
+  }
+  undoLast(): void {
+    const cmd = this.history.pop();
+    if (cmd) console.log(\`Undone: \${cmd.undo()}\`);
+  }
+}
+
+class MacroCommand implements Command {
+  constructor(private commands: Command[]) {}
+  execute(): string { return this.commands.map(c => c.execute()).join(' | '); }
+  undo(): string { return [...this.commands].reverse().map(c => c.undo()).join(' | '); }
+}
+
+const livingRoom = new Light('Living Room');
+const kitchen = new Light('Kitchen');
+const remote = new RemoteControl();
+remote.execute(new LightOnCommand(livingRoom));
+remote.execute(new LightOnCommand(kitchen));
+remote.undoLast();
+remote.execute(new MacroCommand([new LightOnCommand(livingRoom), new LightOnCommand(kitchen)]));`,
+    },
   },
   {
     id: 'state',
@@ -1476,32 +3474,26 @@ remote.execute(all_on)`,
       'Can be overkill if state machine has only a few states or rarely changes',
       'Introduces many classes for complex state machines',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 
 
 class OrderState(ABC):
     @abstractmethod
-    def process(self, order: 'Order') -> str:
-        pass
-
+    def process(self, order: 'Order') -> str: pass
     @abstractmethod
-    def cancel(self, order: 'Order') -> str:
-        pass
-
+    def cancel(self, order: 'Order') -> str: pass
     @abstractmethod
-    def ship(self, order: 'Order') -> str:
-        pass
+    def ship(self, order: 'Order') -> str: pass
 
 
 class PendingState(OrderState):
     def process(self, order: 'Order') -> str:
         order.state = ProcessingState()
         return "Order is now being processed"
-
     def cancel(self, order: 'Order') -> str:
         order.state = CancelledState()
         return "Order cancelled"
-
     def ship(self, order: 'Order') -> str:
         return "Cannot ship - order is still pending!"
 
@@ -1509,36 +3501,24 @@ class PendingState(OrderState):
 class ProcessingState(OrderState):
     def process(self, order: 'Order') -> str:
         return "Order is already being processed"
-
     def cancel(self, order: 'Order') -> str:
         order.state = CancelledState()
         return "Order cancelled (was processing)"
-
     def ship(self, order: 'Order') -> str:
         order.state = ShippedState()
         return "Order has been shipped!"
 
 
 class ShippedState(OrderState):
-    def process(self, order: 'Order') -> str:
-        return "Order already shipped"
-
-    def cancel(self, order: 'Order') -> str:
-        return "Cannot cancel - order already shipped!"
-
-    def ship(self, order: 'Order') -> str:
-        return "Order already shipped"
+    def process(self, order: 'Order') -> str: return "Order already shipped"
+    def cancel(self, order: 'Order') -> str: return "Cannot cancel - order already shipped!"
+    def ship(self, order: 'Order') -> str: return "Order already shipped"
 
 
 class CancelledState(OrderState):
-    def process(self, order: 'Order') -> str:
-        return "Cannot process cancelled order"
-
-    def cancel(self, order: 'Order') -> str:
-        return "Order already cancelled"
-
-    def ship(self, order: 'Order') -> str:
-        return "Cannot ship cancelled order"
+    def process(self, order: 'Order') -> str: return "Cannot process cancelled order"
+    def cancel(self, order: 'Order') -> str: return "Order already cancelled"
+    def ship(self, order: 'Order') -> str: return "Cannot ship cancelled order"
 
 
 class Order:
@@ -1546,26 +3526,177 @@ class Order:
         self.order_id = order_id
         self.state: OrderState = PendingState()
 
-    def process(self) -> str:
-        return self.state.process(self)
-
-    def cancel(self) -> str:
-        return self.state.cancel(self)
-
-    def ship(self) -> str:
-        return self.state.ship(self)
-
-    def status(self) -> str:
-        return type(self.state).__name__.replace("State", "")
+    def process(self) -> str: return self.state.process(self)
+    def cancel(self) -> str: return self.state.cancel(self)
+    def ship(self) -> str: return self.state.ship(self)
+    def status(self) -> str: return type(self.state).__name__.replace("State", "")
 
 
-# Usage
 order = Order("ORD-001")
-print(f"Status: {order.status()}")     # Pending
-print(order.ship())                     # Cannot ship - pending!
-print(order.process())                  # Processing
-print(order.ship())                     # Shipped!
-print(order.cancel())                   # Cannot cancel - shipped!`,
+print(f"Status: {order.status()}")  # Pending
+print(order.ship())                  # Cannot ship - pending!
+print(order.process())               # Processing
+print(order.ship())                  # Shipped!
+print(order.cancel())                # Cannot cancel - shipped!`,
+      java: `interface OrderState {
+    String process(Order order);
+    String cancel(Order order);
+    String ship(Order order);
+}
+
+class PendingState implements OrderState {
+    public String process(Order o) { o.setState(new ProcessingState()); return "Order is now being processed"; }
+    public String cancel(Order o) { o.setState(new CancelledState()); return "Order cancelled"; }
+    public String ship(Order o) { return "Cannot ship - order is still pending!"; }
+}
+
+class ProcessingState implements OrderState {
+    public String process(Order o) { return "Order is already being processed"; }
+    public String cancel(Order o) { o.setState(new CancelledState()); return "Order cancelled (was processing)"; }
+    public String ship(Order o) { o.setState(new ShippedState()); return "Order has been shipped!"; }
+}
+
+class ShippedState implements OrderState {
+    public String process(Order o) { return "Order already shipped"; }
+    public String cancel(Order o) { return "Cannot cancel - order already shipped!"; }
+    public String ship(Order o) { return "Order already shipped"; }
+}
+
+class CancelledState implements OrderState {
+    public String process(Order o) { return "Cannot process cancelled order"; }
+    public String cancel(Order o) { return "Order already cancelled"; }
+    public String ship(Order o) { return "Cannot ship cancelled order"; }
+}
+
+class Order {
+    private String orderId;
+    private OrderState state;
+    Order(String id) { orderId = id; state = new PendingState(); }
+    void setState(OrderState s) { state = s; }
+    public String process() { return state.process(this); }
+    public String cancel() { return state.cancel(this); }
+    public String ship() { return state.ship(this); }
+    public String status() { return state.getClass().getSimpleName().replace("State", ""); }
+
+    public static void main(String[] args) {
+        Order order = new Order("ORD-001");
+        System.out.println("Status: " + order.status());
+        System.out.println(order.ship());
+        System.out.println(order.process());
+        System.out.println(order.ship());
+        System.out.println(order.cancel());
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+#include <memory>
+using namespace std;
+
+class Order;
+class OrderState {
+public:
+    virtual string process(Order& o) = 0;
+    virtual string cancel(Order& o) = 0;
+    virtual string ship(Order& o) = 0;
+    virtual ~OrderState() = default;
+};
+
+class PendingState : public OrderState {
+public:
+    string process(Order& o) override;
+    string cancel(Order& o) override;
+    string ship(Order&) override { return "Cannot ship - order is still pending!"; }
+};
+
+class ProcessingState : public OrderState {
+public:
+    string process(Order&) override { return "Order is already being processed"; }
+    string cancel(Order& o) override;
+    string ship(Order& o) override;
+};
+
+class ShippedState : public OrderState {
+public:
+    string process(Order&) override { return "Order already shipped"; }
+    string cancel(Order&) override { return "Cannot cancel - order already shipped!"; }
+    string ship(Order&) override { return "Order already shipped"; }
+};
+
+class CancelledState : public OrderState {
+public:
+    string process(Order&) override { return "Cannot process cancelled order"; }
+    string cancel(Order&) override { return "Order already cancelled"; }
+    string ship(Order&) override { return "Cannot ship cancelled order"; }
+};
+
+class Order {
+    unique_ptr<OrderState> state;
+public:
+    Order() : state(make_unique<PendingState>()) {}
+    void setState(unique_ptr<OrderState> s) { state = move(s); }
+    string process() { return state->process(*this); }
+    string cancel() { return state->cancel(*this); }
+    string ship() { return state->ship(*this); }
+};
+
+string PendingState::process(Order& o) { o.setState(make_unique<ProcessingState>()); return "Order is now being processed"; }
+string PendingState::cancel(Order& o) { o.setState(make_unique<CancelledState>()); return "Order cancelled"; }
+string ProcessingState::cancel(Order& o) { o.setState(make_unique<CancelledState>()); return "Order cancelled (was processing)"; }
+string ProcessingState::ship(Order& o) { o.setState(make_unique<ShippedState>()); return "Order has been shipped!"; }
+
+int main() {
+    Order order;
+    cout << order.ship() << "\n";
+    cout << order.process() << "\n";
+    cout << order.ship() << "\n";
+    cout << order.cancel() << "\n";
+}`,
+      typescript: `interface OrderState {
+  process(order: Order): string;
+  cancel(order: Order): string;
+  ship(order: Order): string;
+}
+
+class PendingState implements OrderState {
+  process(o: Order): string { o.state = new ProcessingState(); return 'Order is now being processed'; }
+  cancel(o: Order): string { o.state = new CancelledState(); return 'Order cancelled'; }
+  ship(_o: Order): string { return 'Cannot ship - order is still pending!'; }
+}
+
+class ProcessingState implements OrderState {
+  process(_o: Order): string { return 'Order is already being processed'; }
+  cancel(o: Order): string { o.state = new CancelledState(); return 'Order cancelled (was processing)'; }
+  ship(o: Order): string { o.state = new ShippedState(); return 'Order has been shipped!'; }
+}
+
+class ShippedState implements OrderState {
+  process(_o: Order): string { return 'Order already shipped'; }
+  cancel(_o: Order): string { return 'Cannot cancel - order already shipped!'; }
+  ship(_o: Order): string { return 'Order already shipped'; }
+}
+
+class CancelledState implements OrderState {
+  process(_o: Order): string { return 'Cannot process cancelled order'; }
+  cancel(_o: Order): string { return 'Order already cancelled'; }
+  ship(_o: Order): string { return 'Cannot ship cancelled order'; }
+}
+
+class Order {
+  state: OrderState = new PendingState();
+  constructor(public orderId: string) {}
+  process(): string { return this.state.process(this); }
+  cancel(): string { return this.state.cancel(this); }
+  ship(): string { return this.state.ship(this); }
+  status(): string { return this.state.constructor.name.replace('State', ''); }
+}
+
+const order = new Order('ORD-001');
+console.log(\`Status: \${order.status()}\`);  // Pending
+console.log(order.ship());                    // Cannot ship - pending!
+console.log(order.process());                 // Processing
+console.log(order.ship());                    // Shipped!
+console.log(order.cancel());                  // Cannot cancel - shipped!`,
+    },
   },
   {
     id: 'template-method',
@@ -1591,15 +3722,14 @@ print(order.cancel())                   # Cannot cancel - shipped!`,
       'Might violate Liskov Substitution Principle by suppressing default step implementations',
       'Limits clients to overriding only specific parts',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from typing import List
 
 
 class DataProcessor(ABC):
-    """Abstract class defining template method"""
-
     def process(self, data_source: str) -> List[dict]:
-        """Template method - defines the algorithm skeleton"""
+        """Template method"""
         raw_data = self.read_data(data_source)
         parsed_data = self.parse_data(raw_data)
         validated_data = self.validate_data(parsed_data)
@@ -1607,21 +3737,17 @@ class DataProcessor(ABC):
 
     @abstractmethod
     def read_data(self, source: str) -> str:
-        """Subclasses must implement data reading"""
         pass
 
     @abstractmethod
     def parse_data(self, raw: str) -> List[dict]:
-        """Subclasses must implement parsing"""
         pass
 
     def validate_data(self, data: List[dict]) -> List[dict]:
-        """Default validation - can be overridden"""
         return [item for item in data if item]
 
     def transform_data(self, data: List[dict]) -> List[dict]:
-        """Hook - optional override"""
-        return data
+        return data  # hook - override optionally
 
 
 class CSVProcessor(DataProcessor):
@@ -1645,20 +3771,180 @@ class JSONProcessor(DataProcessor):
         return json.loads(raw)
 
     def transform_data(self, data: List[dict]) -> List[dict]:
-        """Override to convert age to int"""
         for item in data:
             item["age"] = int(item["age"])
         return data
 
 
-# Usage
 csv_proc = CSVProcessor()
-result = csv_proc.process("data.csv")
-print(f"CSV Result: {result}")
+print(f"CSV Result: {csv_proc.process('data.csv')}")
 
 json_proc = JSONProcessor()
-result = json_proc.process("data.json")
-print(f"JSON Result: {result}")`,
+print(f"JSON Result: {json_proc.process('data.json')}")`,
+      java: `import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
+abstract class DataProcessor {
+    // Template method
+    public final List<Map<String,String>> process(String dataSource) {
+        String raw = readData(dataSource);
+        List<Map<String,String>> parsed = parseData(raw);
+        List<Map<String,String>> validated = validateData(parsed);
+        return transformData(validated);
+    }
+
+    protected abstract String readData(String source);
+    protected abstract List<Map<String,String>> parseData(String raw);
+
+    protected List<Map<String,String>> validateData(List<Map<String,String>> data) {
+        List<Map<String,String>> result = new ArrayList<>();
+        for (Map<String,String> item : data) if (!item.isEmpty()) result.add(item);
+        return result;
+    }
+
+    protected List<Map<String,String>> transformData(List<Map<String,String>> data) {
+        return data;
+    }
+}
+
+class CSVProcessor extends DataProcessor {
+    protected String readData(String source) {
+        System.out.println("Reading CSV from: " + source);
+        return "name,age\\nAlice,30\\nBob,25";
+    }
+    protected List<Map<String,String>> parseData(String raw) {
+        String[] lines = raw.split("\\n");
+        String[] headers = lines[0].split(",");
+        List<Map<String,String>> result = new ArrayList<>();
+        for (int i = 1; i < lines.length; i++) {
+            String[] vals = lines[i].split(",");
+            Map<String,String> row = new HashMap<>();
+            for (int j = 0; j < headers.length; j++) row.put(headers[j], vals[j]);
+            result.add(row);
+        }
+        return result;
+    }
+}
+
+class Main {
+    public static void main(String[] args) {
+        CSVProcessor csv = new CSVProcessor();
+        System.out.println("CSV Result: " + csv.process("data.csv"));
+    }
+}`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <map>
+#include <string>
+#include <sstream>
+using namespace std;
+
+using Row = map<string,string>;
+
+class DataProcessor {
+public:
+    // Template method
+    vector<Row> process(const string& dataSource) {
+        string raw = readData(dataSource);
+        auto parsed = parseData(raw);
+        auto validated = validateData(parsed);
+        return transformData(validated);
+    }
+
+    virtual string readData(const string& source) = 0;
+    virtual vector<Row> parseData(const string& raw) = 0;
+
+    virtual vector<Row> validateData(const vector<Row>& data) { return data; }
+    virtual vector<Row> transformData(const vector<Row>& data) { return data; }
+    virtual ~DataProcessor() = default;
+};
+
+class CSVProcessor : public DataProcessor {
+public:
+    string readData(const string& source) override {
+        cout << "Reading CSV from: " << source << "\n";
+        return "name,age\\nAlice,30\\nBob,25";
+    }
+    vector<Row> parseData(const string& raw) override {
+        vector<Row> result;
+        istringstream ss(raw);
+        string line; vector<string> headers;
+        if (getline(ss, line)) {
+            istringstream hl(line);
+            string h; while (getline(hl, h, ',')) headers.push_back(h);
+        }
+        while (getline(ss, line)) {
+            istringstream vl(line); Row row; int i = 0;
+            string v; while (getline(vl, v, ',')) row[headers[i++]] = v;
+            result.push_back(row);
+        }
+        return result;
+    }
+};
+
+int main() {
+    CSVProcessor csv;
+    auto result = csv.process("data.csv");
+    for (auto& row : result) {
+        for (auto& [k,v] : row) cout << k << "=" << v << " ";
+        cout << "\n";
+    }
+}`,
+      typescript: `abstract class DataProcessor {
+  // Template method
+  process(dataSource: string): Record<string, string>[] {
+    const raw = this.readData(dataSource);
+    const parsed = this.parseData(raw);
+    const validated = this.validateData(parsed);
+    return this.transformData(validated);
+  }
+
+  protected abstract readData(source: string): string;
+  protected abstract parseData(raw: string): Record<string, string>[];
+
+  protected validateData(data: Record<string, string>[]): Record<string, string>[] {
+    return data.filter(item => Object.keys(item).length > 0);
+  }
+
+  protected transformData(data: Record<string, string>[]): Record<string, string>[] {
+    return data; // hook - override optionally
+  }
+}
+
+class CSVProcessor extends DataProcessor {
+  protected readData(source: string): string {
+    console.log(\`Reading CSV from: \${source}\`);
+    return 'name,age\\nAlice,30\\nBob,25';
+  }
+  protected parseData(raw: string): Record<string, string>[] {
+    const lines = raw.trim().split('\\n');
+    const headers = lines[0].split(',');
+    return lines.slice(1).map(line => {
+      const values = line.split(',');
+      return Object.fromEntries(headers.map((h, i) => [h, values[i]]));
+    });
+  }
+}
+
+class JSONProcessor extends DataProcessor {
+  protected readData(source: string): string {
+    console.log(\`Reading JSON from: \${source}\`);
+    return '[{"name":"Alice","age":"30"},{"name":"Bob","age":"25"}]';
+  }
+  protected parseData(raw: string): Record<string, string>[] {
+    return JSON.parse(raw);
+  }
+  protected transformData(data: Record<string, string>[]): Record<string, string>[] {
+    return data.map(item => ({ ...item, age: String(parseInt(item.age)) }));
+  }
+}
+
+console.log('CSV Result:', new CSVProcessor().process('data.csv'));
+console.log('JSON Result:', new JSONProcessor().process('data.json'));`,
+    },
   },
   {
     id: 'iterator',
@@ -1684,9 +3970,8 @@ print(f"JSON Result: {result}")`,
       'Overkill for simple collections',
       'Less efficient than direct traversal for specialized collections',
     ],
-    pythonCode: `from typing import Iterator, List, TypeVar, Generic
-
-T = TypeVar('T')
+    code: {
+      python: `from typing import Iterator
 
 
 class TreeNode:
@@ -1701,7 +3986,6 @@ class BinaryTree:
         self.root = root
 
     def inorder(self) -> Iterator[int]:
-        """In-order traversal iterator"""
         def traverse(node):
             if node:
                 yield from traverse(node.left)
@@ -1710,7 +3994,6 @@ class BinaryTree:
         return traverse(self.root)
 
     def preorder(self) -> Iterator[int]:
-        """Pre-order traversal iterator"""
         def traverse(node):
             if node:
                 yield node.value
@@ -1719,7 +4002,6 @@ class BinaryTree:
         return traverse(self.root)
 
     def level_order(self) -> Iterator[int]:
-        """BFS level-order traversal"""
         from collections import deque
         if not self.root:
             return
@@ -1727,10 +4009,8 @@ class BinaryTree:
         while queue:
             node = queue.popleft()
             yield node.value
-            if node.left:
-                queue.append(node.left)
-            if node.right:
-                queue.append(node.right)
+            if node.left: queue.append(node.left)
+            if node.right: queue.append(node.right)
 
 
 # Build tree:     4
@@ -1747,9 +4027,177 @@ root.right.left = TreeNode(5)
 root.right.right = TreeNode(7)
 
 tree = BinaryTree(root)
-print("In-order:", list(tree.inorder()))     # [1,2,3,4,5,6,7]
-print("Pre-order:", list(tree.preorder()))   # [4,2,1,3,6,5,7]
-print("Level-order:", list(tree.level_order()))  # [4,2,6,1,3,5,7]`,
+print("In-order:", list(tree.inorder()))      # [1,2,3,4,5,6,7]
+print("Pre-order:", list(tree.preorder()))    # [4,2,1,3,6,5,7]
+print("Level-order:", list(tree.level_order())) # [4,2,6,1,3,5,7]`,
+      java: `import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
+class TreeNode {
+    int value; TreeNode left, right;
+    TreeNode(int v) { value = v; }
+}
+
+class BinaryTree implements Iterable<Integer> {
+    private final TreeNode root;
+    BinaryTree(TreeNode root) { this.root = root; }
+
+    public java.util.Iterator<Integer> iterator() { return inorder().iterator(); }
+
+    public List<Integer> inorder() {
+        List<Integer> result = new ArrayList<>();
+        inorder(root, result);
+        return result;
+    }
+    private void inorder(TreeNode n, List<Integer> res) {
+        if (n == null) return;
+        inorder(n.left, res); res.add(n.value); inorder(n.right, res);
+    }
+
+    public List<Integer> preorder() {
+        List<Integer> result = new ArrayList<>();
+        preorder(root, result);
+        return result;
+    }
+    private void preorder(TreeNode n, List<Integer> res) {
+        if (n == null) return;
+        res.add(n.value); preorder(n.left, res); preorder(n.right, res);
+    }
+
+    public List<Integer> levelOrder() {
+        List<Integer> result = new ArrayList<>();
+        if (root == null) return result;
+        Queue<TreeNode> queue = new LinkedList<>();
+        queue.add(root);
+        while (!queue.isEmpty()) {
+            TreeNode n = queue.poll();
+            result.add(n.value);
+            if (n.left != null) queue.add(n.left);
+            if (n.right != null) queue.add(n.right);
+        }
+        return result;
+    }
+
+    public static void main(String[] args) {
+        TreeNode root = new TreeNode(4);
+        root.left = new TreeNode(2); root.right = new TreeNode(6);
+        root.left.left = new TreeNode(1); root.left.right = new TreeNode(3);
+        root.right.left = new TreeNode(5); root.right.right = new TreeNode(7);
+        BinaryTree tree = new BinaryTree(root);
+        System.out.println("In-order: " + tree.inorder());
+        System.out.println("Pre-order: " + tree.preorder());
+        System.out.println("Level-order: " + tree.levelOrder());
+    }
+}`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <queue>
+using namespace std;
+
+struct TreeNode {
+    int value; TreeNode* left = nullptr; TreeNode* right = nullptr;
+    TreeNode(int v) : value(v) {}
+};
+
+class BinaryTree {
+    TreeNode* root;
+    void inorderHelper(TreeNode* n, vector<int>& res) {
+        if (!n) return;
+        inorderHelper(n->left, res); res.push_back(n->value); inorderHelper(n->right, res);
+    }
+    void preorderHelper(TreeNode* n, vector<int>& res) {
+        if (!n) return;
+        res.push_back(n->value); preorderHelper(n->left, res); preorderHelper(n->right, res);
+    }
+public:
+    BinaryTree(TreeNode* r) : root(r) {}
+    vector<int> inorder() { vector<int> r; inorderHelper(root, r); return r; }
+    vector<int> preorder() { vector<int> r; preorderHelper(root, r); return r; }
+    vector<int> levelOrder() {
+        vector<int> result;
+        if (!root) return result;
+        queue<TreeNode*> q; q.push(root);
+        while (!q.empty()) {
+            auto* n = q.front(); q.pop();
+            result.push_back(n->value);
+            if (n->left) q.push(n->left);
+            if (n->right) q.push(n->right);
+        }
+        return result;
+    }
+};
+
+void printVec(const string& label, const vector<int>& v) {
+    cout << label << ": [";
+    for (int i = 0; i < (int)v.size(); i++) { if (i) cout << ","; cout << v[i]; }
+    cout << "]\n";
+}
+
+int main() {
+    auto* root = new TreeNode(4);
+    root->left = new TreeNode(2); root->right = new TreeNode(6);
+    root->left->left = new TreeNode(1); root->left->right = new TreeNode(3);
+    root->right->left = new TreeNode(5); root->right->right = new TreeNode(7);
+    BinaryTree tree(root);
+    printVec("In-order", tree.inorder());
+    printVec("Pre-order", tree.preorder());
+    printVec("Level-order", tree.levelOrder());
+}`,
+      typescript: `class TreeNode {
+  left: TreeNode | null = null;
+  right: TreeNode | null = null;
+  constructor(public value: number) {}
+}
+
+class BinaryTree {
+  constructor(private root: TreeNode | null) {}
+
+  *inorder(): IterableIterator<number> {
+    function* traverse(node: TreeNode | null): IterableIterator<number> {
+      if (!node) return;
+      yield* traverse(node.left);
+      yield node.value;
+      yield* traverse(node.right);
+    }
+    yield* traverse(this.root);
+  }
+
+  *preorder(): IterableIterator<number> {
+    function* traverse(node: TreeNode | null): IterableIterator<number> {
+      if (!node) return;
+      yield node.value;
+      yield* traverse(node.left);
+      yield* traverse(node.right);
+    }
+    yield* traverse(this.root);
+  }
+
+  levelOrder(): number[] {
+    const result: number[] = [];
+    if (!this.root) return result;
+    const queue = [this.root];
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      result.push(node.value);
+      if (node.left) queue.push(node.left);
+      if (node.right) queue.push(node.right);
+    }
+    return result;
+  }
+}
+
+const root = new TreeNode(4);
+root.left = new TreeNode(2); root.right = new TreeNode(6);
+root.left.left = new TreeNode(1); root.left.right = new TreeNode(3);
+root.right.left = new TreeNode(5); root.right.right = new TreeNode(7);
+
+const tree = new BinaryTree(root);
+console.log('In-order:', [...tree.inorder()]);    // [1,2,3,4,5,6,7]
+console.log('Pre-order:', [...tree.preorder()]);  // [4,2,1,3,6,5,7]
+console.log('Level-order:', tree.levelOrder());   // [4,2,6,1,3,5,7]`,
+    },
   },
   {
     id: 'mediator',
@@ -1775,15 +4223,15 @@ print("Level-order:", list(tree.level_order()))  # [4,2,6,1,3,5,7]`,
       'Mediator can become a God Object',
       'All complexity moves to mediator',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
-from typing import List
+    code: {
+      python: `from abc import ABC, abstractmethod
+from typing import Dict
 
 
 class ChatMediator(ABC):
     @abstractmethod
     def send_message(self, message: str, sender: 'User', recipient: str = None):
         pass
-
     @abstractmethod
     def add_user(self, user: 'User'):
         pass
@@ -1792,23 +4240,21 @@ class ChatMediator(ABC):
 class ChatRoom(ChatMediator):
     def __init__(self, name: str):
         self.name = name
-        self._users: dict = {}
+        self._users: Dict[str, 'User'] = {}
 
     def add_user(self, user: 'User'):
         self._users[user.username] = user
-        print(f"[{self.name}] {user.username} joined the chat")
+        print(f"[{self.name}] {user.username} joined")
 
     def send_message(self, message: str, sender: 'User', recipient: str = None):
         if recipient:
-            # Direct message
             if recipient in self._users:
                 self._users[recipient].receive(f"[DM from {sender.username}] {message}")
             else:
                 sender.receive(f"User '{recipient}' not found")
         else:
-            # Broadcast to all except sender
-            for username, user in self._users.items():
-                if username != sender.username:
+            for name, user in self._users.items():
+                if name != sender.username:
                     user.receive(f"[{self.name}] {sender.username}: {message}")
 
 
@@ -1822,18 +4268,171 @@ class User:
         self._mediator.send_message(message, self, to)
 
     def receive(self, message: str):
-        print(f"  → {self.username} received: {message}")
+        print(f"  -> {self.username} received: {message}")
 
 
-# Usage
 chat = ChatRoom("Python Devs")
 alice = User("Alice", chat)
 bob = User("Bob", chat)
 charlie = User("Charlie", chat)
 
 alice.send("Hey everyone!")
-bob.send("Hi Alice!", to="Alice")  # Direct message
+bob.send("Hi Alice!", to="Alice")
 charlie.send("Hello world!")`,
+      java: `import java.util.HashMap;
+import java.util.Map;
+
+interface ChatMediator {
+    void sendMessage(String message, User sender, String recipient);
+    void addUser(User user);
+}
+
+class ChatRoom implements ChatMediator {
+    private String name;
+    private Map<String, User> users = new HashMap<>();
+    ChatRoom(String name) { this.name = name; }
+
+    public void addUser(User user) {
+        users.put(user.username, user);
+        System.out.println("[" + name + "] " + user.username + " joined");
+    }
+
+    public void sendMessage(String message, User sender, String recipient) {
+        if (recipient != null) {
+            User target = users.get(recipient);
+            if (target != null) target.receive("[DM from " + sender.username + "] " + message);
+            else sender.receive("User '" + recipient + "' not found");
+        } else {
+            for (Map.Entry<String,User> e : users.entrySet()) {
+                if (!e.getKey().equals(sender.username))
+                    e.getValue().receive("[" + name + "] " + sender.username + ": " + message);
+            }
+        }
+    }
+}
+
+class User {
+    String username;
+    private ChatMediator mediator;
+    User(String username, ChatMediator mediator) {
+        this.username = username; this.mediator = mediator;
+        mediator.addUser(this);
+    }
+    void send(String message) { mediator.sendMessage(message, this, null); }
+    void sendTo(String message, String to) { mediator.sendMessage(message, this, to); }
+    void receive(String message) { System.out.println("  -> " + username + " received: " + message); }
+
+    public static void main(String[] args) {
+        ChatRoom chat = new ChatRoom("Java Devs");
+        User alice = new User("Alice", chat);
+        User bob = new User("Bob", chat);
+        User charlie = new User("Charlie", chat);
+        alice.send("Hey everyone!");
+        bob.sendTo("Hi Alice!", "Alice");
+        charlie.send("Hello world!");
+    }
+}`,
+      cpp: `#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+
+class User;
+
+class ChatMediator {
+public:
+    virtual void sendMessage(const string& msg, User* sender, const string& recipient = "") = 0;
+    virtual void addUser(User* user) = 0;
+    virtual ~ChatMediator() = default;
+};
+
+class User {
+public:
+    string username;
+    ChatMediator* mediator;
+    User(const string& name, ChatMediator* m) : username(name), mediator(m) {
+        m->addUser(this);
+    }
+    void send(const string& msg, const string& to = "") {
+        mediator->sendMessage(msg, this, to);
+    }
+    void receive(const string& msg) {
+        cout << "  -> " << username << " received: " << msg << "\n";
+    }
+};
+
+class ChatRoom : public ChatMediator {
+    string name;
+    map<string, User*> users;
+public:
+    ChatRoom(const string& n) : name(n) {}
+    void addUser(User* user) override {
+        users[user->username] = user;
+        cout << "[" << name << "] " << user->username << " joined\n";
+    }
+    void sendMessage(const string& msg, User* sender, const string& recipient = "") override {
+        if (!recipient.empty()) {
+            auto it = users.find(recipient);
+            if (it != users.end()) it->second->receive("[DM from " + sender->username + "] " + msg);
+            else sender->receive("User '" + recipient + "' not found");
+        } else {
+            for (auto& [name, user] : users)
+                if (name != sender->username)
+                    user->receive("[" + this->name + "] " + sender->username + ": " + msg);
+        }
+    }
+};
+
+int main() {
+    ChatRoom chat("C++ Devs");
+    User alice("Alice", &chat), bob("Bob", &chat), charlie("Charlie", &chat);
+    alice.send("Hey everyone!");
+    bob.send("Hi Alice!", "Alice");
+    charlie.send("Hello world!");
+}`,
+      typescript: `interface ChatMediator {
+  sendMessage(message: string, sender: User, recipient?: string): void;
+  addUser(user: User): void;
+}
+
+class ChatRoom implements ChatMediator {
+  private users = new Map<string, User>();
+  constructor(public name: string) {}
+
+  addUser(user: User): void {
+    this.users.set(user.username, user);
+    console.log(\`[\${this.name}] \${user.username} joined\`);
+  }
+
+  sendMessage(message: string, sender: User, recipient?: string): void {
+    if (recipient) {
+      const target = this.users.get(recipient);
+      if (target) target.receive(\`[DM from \${sender.username}] \${message}\`);
+      else sender.receive(\`User '\${recipient}' not found\`);
+    } else {
+      this.users.forEach((user, name) => {
+        if (name !== sender.username) user.receive(\`[\${this.name}] \${sender.username}: \${message}\`);
+      });
+    }
+  }
+}
+
+class User {
+  constructor(public username: string, private mediator: ChatMediator) {
+    mediator.addUser(this);
+  }
+  send(message: string, to?: string): void { this.mediator.sendMessage(message, this, to); }
+  receive(message: string): void { console.log(\`  -> \${this.username} received: \${message}\`); }
+}
+
+const chat = new ChatRoom('TS Devs');
+const alice = new User('Alice', chat);
+const bob = new User('Bob', chat);
+const charlie = new User('Charlie', chat);
+alice.send('Hey everyone!');
+bob.send('Hi Alice!', 'Alice');
+charlie.send('Hello world!');`,
+    },
   },
   {
     id: 'memento',
@@ -1859,29 +4458,25 @@ charlie.send("Hello world!")`,
       'Dynamic languages may not guarantee private state',
       'Caretakers must track originator lifecycle',
     ],
-    pythonCode: `from typing import List, Optional
+    code: {
+      python: `from typing import List, Optional
 from dataclasses import dataclass
 from copy import deepcopy
 
 
 @dataclass
 class EditorState:
-    """Memento - stores editor state"""
     content: str
     cursor_pos: int
-    selection: Optional[tuple] = None
 
 
 class TextEditor:
-    """Originator"""
     def __init__(self):
         self._content = ""
         self._cursor_pos = 0
-        self._selection = None
 
     def type(self, text: str):
-        self._content = (self._content[:self._cursor_pos] +
-                         text +
+        self._content = (self._content[:self._cursor_pos] + text +
                          self._content[self._cursor_pos:])
         self._cursor_pos += len(text)
 
@@ -1891,14 +4486,11 @@ class TextEditor:
         self._cursor_pos = start
 
     def save(self) -> EditorState:
-        """Create memento snapshot"""
-        return EditorState(self._content, self._cursor_pos, self._selection)
+        return EditorState(self._content, self._cursor_pos)
 
     def restore(self, state: EditorState):
-        """Restore from memento"""
         self._content = state.content
         self._cursor_pos = state.cursor_pos
-        self._selection = state.selection
 
     @property
     def content(self) -> str:
@@ -1906,7 +4498,6 @@ class TextEditor:
 
 
 class EditorHistory:
-    """Caretaker - manages mementos"""
     def __init__(self, editor: TextEditor):
         self._editor = editor
         self._history: List[EditorState] = []
@@ -1916,28 +4507,206 @@ class EditorHistory:
 
     def undo(self):
         if self._history:
-            state = self._history.pop()
-            self._editor.restore(state)
+            self._editor.restore(self._history.pop())
             print(f"Undone. Content: '{self._editor.content}'")
         else:
             print("Nothing to undo!")
 
 
-# Usage
 editor = TextEditor()
 history = EditorHistory(editor)
-
 history.save()
 editor.type("Hello")
 history.save()
 editor.type(", World!")
 history.save()
 editor.type(" Extra text")
-
 print(f"Current: '{editor.content}'")
-history.undo()  # Remove extra text
-history.undo()  # Remove ", World!"
-history.undo()  # Back to empty`,
+history.undo()
+history.undo()
+history.undo()`,
+      java: `import java.util.ArrayDeque;
+import java.util.Deque;
+
+class EditorState {
+    final String content;
+    final int cursorPos;
+    EditorState(String content, int cursorPos) {
+        this.content = content; this.cursorPos = cursorPos;
+    }
+}
+
+class TextEditor {
+    private String content = "";
+    private int cursorPos = 0;
+
+    public void type(String text) {
+        content = content.substring(0, cursorPos) + text + content.substring(cursorPos);
+        cursorPos += text.length();
+    }
+
+    public void delete(int count) {
+        int start = Math.max(0, cursorPos - count);
+        content = content.substring(0, start) + content.substring(cursorPos);
+        cursorPos = start;
+    }
+
+    public EditorState save() { return new EditorState(content, cursorPos); }
+
+    public void restore(EditorState state) {
+        content = state.content; cursorPos = state.cursorPos;
+    }
+
+    public String getContent() { return content; }
+}
+
+class EditorHistory {
+    private final TextEditor editor;
+    private final Deque<EditorState> history = new ArrayDeque<>();
+    EditorHistory(TextEditor editor) { this.editor = editor; }
+
+    public void save() { history.push(editor.save()); }
+
+    public void undo() {
+        if (!history.isEmpty()) {
+            editor.restore(history.pop());
+            System.out.println("Undone. Content: '" + editor.getContent() + "'");
+        } else {
+            System.out.println("Nothing to undo!");
+        }
+    }
+
+    public static void main(String[] args) {
+        TextEditor editor = new TextEditor();
+        EditorHistory history = new EditorHistory(editor);
+        history.save();
+        editor.type("Hello");
+        history.save();
+        editor.type(", World!");
+        history.save();
+        editor.type(" Extra text");
+        System.out.println("Current: '" + editor.getContent() + "'");
+        history.undo();
+        history.undo();
+        history.undo();
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+struct EditorState {
+    string content;
+    int cursorPos;
+};
+
+class TextEditor {
+    string content;
+    int cursorPos = 0;
+public:
+    void type(const string& text) {
+        content = content.substr(0, cursorPos) + text + content.substr(cursorPos);
+        cursorPos += text.length();
+    }
+    void del(int count = 1) {
+        int start = max(0, cursorPos - count);
+        content = content.substr(0, start) + content.substr(cursorPos);
+        cursorPos = start;
+    }
+    EditorState save() const { return {content, cursorPos}; }
+    void restore(const EditorState& state) { content = state.content; cursorPos = state.cursorPos; }
+    string getContent() const { return content; }
+};
+
+class EditorHistory {
+    TextEditor& editor;
+    vector<EditorState> history;
+public:
+    EditorHistory(TextEditor& e) : editor(e) {}
+    void save() { history.push_back(editor.save()); }
+    void undo() {
+        if (!history.empty()) {
+            editor.restore(history.back()); history.pop_back();
+            cout << "Undone. Content: '" << editor.getContent() << "'\n";
+        } else cout << "Nothing to undo!\n";
+    }
+};
+
+int main() {
+    TextEditor editor;
+    EditorHistory history(editor);
+    history.save();
+    editor.type("Hello");
+    history.save();
+    editor.type(", World!");
+    history.save();
+    editor.type(" Extra text");
+    cout << "Current: '" << editor.getContent() << "'\n";
+    history.undo();
+    history.undo();
+    history.undo();
+}`,
+      typescript: `interface EditorState {
+  content: string;
+  cursorPos: number;
+}
+
+class TextEditor {
+  private content = '';
+  private cursorPos = 0;
+
+  type(text: string): void {
+    this.content = this.content.slice(0, this.cursorPos) + text + this.content.slice(this.cursorPos);
+    this.cursorPos += text.length;
+  }
+
+  delete(count = 1): void {
+    const start = Math.max(0, this.cursorPos - count);
+    this.content = this.content.slice(0, start) + this.content.slice(this.cursorPos);
+    this.cursorPos = start;
+  }
+
+  save(): EditorState { return { content: this.content, cursorPos: this.cursorPos }; }
+
+  restore(state: EditorState): void {
+    this.content = state.content;
+    this.cursorPos = state.cursorPos;
+  }
+
+  getContent(): string { return this.content; }
+}
+
+class EditorHistory {
+  private history: EditorState[] = [];
+  constructor(private editor: TextEditor) {}
+
+  save(): void { this.history.push(this.editor.save()); }
+
+  undo(): void {
+    const state = this.history.pop();
+    if (state) {
+      this.editor.restore(state);
+      console.log(\`Undone. Content: '\${this.editor.getContent()}'\`);
+    } else {
+      console.log('Nothing to undo!');
+    }
+  }
+}
+
+const editor = new TextEditor();
+const history = new EditorHistory(editor);
+history.save();
+editor.type('Hello');
+history.save();
+editor.type(', World!');
+history.save();
+editor.type(' Extra text');
+console.log(\`Current: '\${editor.getContent()}'\`);
+history.undo();
+history.undo();
+history.undo();`,
+    },
   },
   {
     id: 'chain-of-responsibility',
@@ -1964,7 +4733,8 @@ history.undo()  # Back to empty`,
       'Hard to debug chain behavior',
       'Can create circular chains by mistake',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
@@ -1983,20 +4753,20 @@ class RequestHandler(ABC):
 
     def set_next(self, handler: 'RequestHandler') -> 'RequestHandler':
         self._next = handler
-        return handler  # Return for chaining
+        return handler
 
     def handle(self, request: Request) -> Optional[str]:
         if self._next:
             return self._next.handle(request)
-        return None  # End of chain
+        return None
 
 
 class AuthHandler(RequestHandler):
     def handle(self, request: Request) -> Optional[str]:
         if not request.token:
-            return f"401 Unauthorized: No token provided"
+            return "401 Unauthorized: No token provided"
         if request.token != "valid_token":
-            return f"403 Forbidden: Invalid token"
+            return "403 Forbidden: Invalid token"
         print(f"[Auth] User '{request.user}' authenticated")
         return super().handle(request)
 
@@ -2009,7 +4779,7 @@ class RateLimitHandler(RequestHandler):
     def handle(self, request: Request) -> Optional[str]:
         if request.rate_limit_count > self.max_requests:
             return f"429 Too Many Requests: limit is {self.max_requests}/hour"
-        print(f"[Rate] Count {request.rate_limit_count}/{self.max_requests} - OK")
+        print(f"[Rate] {request.rate_limit_count}/{self.max_requests} - OK")
         return super().handle(request)
 
 
@@ -2027,20 +4797,200 @@ class BusinessLogicHandler(RequestHandler):
         return "200 OK: Request processed successfully"
 
 
-# Build the chain
 auth = AuthHandler()
 rate_limit = RateLimitHandler(100)
 validation = ValidationHandler()
 business = BusinessLogicHandler()
-
 auth.set_next(rate_limit).set_next(validation).set_next(business)
 
-# Test requests
 r1 = Request("alice", "valid_token", 50, {"action": "buy"})
 print(auth.handle(r1))
 
 r2 = Request("bob", None, 50, {})
-print(auth.handle(r2))  # Fails auth`,
+print(auth.handle(r2))`,
+      java: `class HttpRequest {
+    String user, token, body; int rateLimitCount;
+    HttpRequest(String user, String token, int count, String body) {
+        this.user=user; this.token=token; this.rateLimitCount=count; this.body=body;
+    }
+}
+
+abstract class RequestHandler {
+    private RequestHandler next;
+    public RequestHandler setNext(RequestHandler next) { this.next = next; return next; }
+    public String handle(HttpRequest req) {
+        if (next != null) return next.handle(req);
+        return null;
+    }
+}
+
+class AuthHandler extends RequestHandler {
+    public String handle(HttpRequest req) {
+        if (req.token == null) return "401 Unauthorized: No token provided";
+        if (!req.token.equals("valid_token")) return "403 Forbidden: Invalid token";
+        System.out.println("[Auth] User '" + req.user + "' authenticated");
+        return super.handle(req);
+    }
+}
+
+class RateLimitHandler extends RequestHandler {
+    private int maxRequests;
+    RateLimitHandler(int max) { this.maxRequests = max; }
+    public String handle(HttpRequest req) {
+        if (req.rateLimitCount > maxRequests) return "429 Too Many Requests";
+        System.out.println("[Rate] " + req.rateLimitCount + "/" + maxRequests + " - OK");
+        return super.handle(req);
+    }
+}
+
+class ValidationHandler extends RequestHandler {
+    public String handle(HttpRequest req) {
+        if (req.body == null || req.body.isEmpty()) return "400 Bad Request: Empty body";
+        System.out.println("[Validation] Body valid: " + req.body);
+        return super.handle(req);
+    }
+}
+
+class BusinessLogicHandler extends RequestHandler {
+    public String handle(HttpRequest req) {
+        System.out.println("[Business] Processing request from '" + req.user + "'");
+        return "200 OK: Request processed successfully";
+    }
+}
+
+class Main {
+    public static void main(String[] args) {
+        AuthHandler auth = new AuthHandler();
+        auth.setNext(new RateLimitHandler(100)).setNext(new ValidationHandler()).setNext(new BusinessLogicHandler());
+        System.out.println(auth.handle(new HttpRequest("alice", "valid_token", 50, "buy")));
+        System.out.println(auth.handle(new HttpRequest("bob", null, 50, "buy")));
+    }
+}`,
+      cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+struct HttpRequest {
+    string user, token, body;
+    int rateLimitCount;
+};
+
+class RequestHandler {
+protected:
+    RequestHandler* next = nullptr;
+public:
+    RequestHandler* setNext(RequestHandler* n) { next = n; return n; }
+    virtual string handle(const HttpRequest& req) {
+        if (next) return next->handle(req);
+        return "";
+    }
+    virtual ~RequestHandler() = default;
+};
+
+class AuthHandler : public RequestHandler {
+public:
+    string handle(const HttpRequest& req) override {
+        if (req.token.empty()) return "401 Unauthorized: No token provided";
+        if (req.token != "valid_token") return "403 Forbidden: Invalid token";
+        cout << "[Auth] User '" << req.user << "' authenticated\n";
+        return RequestHandler::handle(req);
+    }
+};
+
+class RateLimitHandler : public RequestHandler {
+    int maxRequests;
+public:
+    RateLimitHandler(int max) : maxRequests(max) {}
+    string handle(const HttpRequest& req) override {
+        if (req.rateLimitCount > maxRequests) return "429 Too Many Requests";
+        cout << "[Rate] " << req.rateLimitCount << "/" << maxRequests << " - OK\n";
+        return RequestHandler::handle(req);
+    }
+};
+
+class ValidationHandler : public RequestHandler {
+public:
+    string handle(const HttpRequest& req) override {
+        if (req.body.empty()) return "400 Bad Request: Empty body";
+        cout << "[Validation] Body valid: " << req.body << "\n";
+        return RequestHandler::handle(req);
+    }
+};
+
+class BusinessLogicHandler : public RequestHandler {
+public:
+    string handle(const HttpRequest& req) override {
+        cout << "[Business] Processing request from '" << req.user << "'\n";
+        return "200 OK: Request processed successfully";
+    }
+};
+
+int main() {
+    AuthHandler auth; RateLimitHandler rate(100);
+    ValidationHandler validation; BusinessLogicHandler business;
+    auth.setNext(&rate)->setNext(&validation)->setNext(&business);
+    cout << auth.handle({"alice", "valid_token", "", 50}) << "\n";
+    cout << auth.handle({"bob", "", "buy", 50}) << "\n";
+}`,
+      typescript: `interface HttpRequest {
+  user: string;
+  token: string | null;
+  rateLimitCount: number;
+  body: Record<string, unknown>;
+}
+
+abstract class RequestHandler {
+  private next: RequestHandler | null = null;
+
+  setNext(handler: RequestHandler): RequestHandler {
+    this.next = handler;
+    return handler;
+  }
+
+  handle(request: HttpRequest): string | null {
+    if (this.next) return this.next.handle(request);
+    return null;
+  }
+}
+
+class AuthHandler extends RequestHandler {
+  handle(request: HttpRequest): string | null {
+    if (!request.token) return '401 Unauthorized: No token provided';
+    if (request.token !== 'valid_token') return '403 Forbidden: Invalid token';
+    console.log(\`[Auth] User '\${request.user}' authenticated\`);
+    return super.handle(request);
+  }
+}
+
+class RateLimitHandler extends RequestHandler {
+  constructor(private maxRequests: number) { super(); }
+  handle(request: HttpRequest): string | null {
+    if (request.rateLimitCount > this.maxRequests) return \`429 Too Many Requests\`;
+    console.log(\`[Rate] \${request.rateLimitCount}/\${this.maxRequests} - OK\`);
+    return super.handle(request);
+  }
+}
+
+class ValidationHandler extends RequestHandler {
+  handle(request: HttpRequest): string | null {
+    if (!request.body || Object.keys(request.body).length === 0) return '400 Bad Request: Empty body';
+    console.log(\`[Validation] Body valid\`);
+    return super.handle(request);
+  }
+}
+
+class BusinessLogicHandler extends RequestHandler {
+  handle(request: HttpRequest): string | null {
+    console.log(\`[Business] Processing request from '\${request.user}'\`);
+    return '200 OK: Request processed successfully';
+  }
+}
+
+const auth = new AuthHandler();
+auth.setNext(new RateLimitHandler(100)).setNext(new ValidationHandler()).setNext(new BusinessLogicHandler());
+console.log(auth.handle({ user: 'alice', token: 'valid_token', rateLimitCount: 50, body: { action: 'buy' } }));
+console.log(auth.handle({ user: 'bob', token: null, rateLimitCount: 50, body: {} }));`,
+    },
   },
   {
     id: 'visitor',
@@ -2066,19 +5016,19 @@ print(auth.handle(r2))  # Fails auth`,
       'Visitors might lack access to private members',
       'Complex structure for simple use cases',
     ],
-    pythonCode: `from abc import ABC, abstractmethod
+    code: {
+      python: `from abc import ABC, abstractmethod
 from typing import List
+import math
 
 
 class ShapeVisitor(ABC):
     @abstractmethod
     def visit_circle(self, circle: 'Circle') -> float:
         pass
-
     @abstractmethod
     def visit_rectangle(self, rect: 'Rectangle') -> float:
         pass
-
     @abstractmethod
     def visit_triangle(self, triangle: 'Triangle') -> float:
         pass
@@ -2093,7 +5043,6 @@ class Shape(ABC):
 class Circle(Shape):
     def __init__(self, radius: float):
         self.radius = radius
-
     def accept(self, visitor: ShapeVisitor):
         return visitor.visit_circle(self)
 
@@ -2102,7 +5051,6 @@ class Rectangle(Shape):
     def __init__(self, width: float, height: float):
         self.width = width
         self.height = height
-
     def accept(self, visitor: ShapeVisitor):
         return visitor.visit_rectangle(self)
 
@@ -2111,39 +5059,24 @@ class Triangle(Shape):
     def __init__(self, base: float, height: float):
         self.base = base
         self.height = height
-
     def accept(self, visitor: ShapeVisitor):
         return visitor.visit_triangle(self)
 
 
-# Concrete Visitors - add operations without modifying shapes
-import math
-
 class AreaCalculator(ShapeVisitor):
-    def visit_circle(self, circle: Circle) -> float:
-        return math.pi * circle.radius ** 2
-
-    def visit_rectangle(self, rect: Rectangle) -> float:
-        return rect.width * rect.height
-
-    def visit_triangle(self, triangle: Triangle) -> float:
-        return 0.5 * triangle.base * triangle.height
+    def visit_circle(self, c: Circle) -> float: return math.pi * c.radius ** 2
+    def visit_rectangle(self, r: Rectangle) -> float: return r.width * r.height
+    def visit_triangle(self, t: Triangle) -> float: return 0.5 * t.base * t.height
 
 
 class PerimeterCalculator(ShapeVisitor):
-    def visit_circle(self, circle: Circle) -> float:
-        return 2 * math.pi * circle.radius
-
-    def visit_rectangle(self, rect: Rectangle) -> float:
-        return 2 * (rect.width + rect.height)
-
-    def visit_triangle(self, triangle: Triangle) -> float:
-        # Simplified for right triangle
-        hyp = math.sqrt(triangle.base**2 + triangle.height**2)
-        return triangle.base + triangle.height + hyp
+    def visit_circle(self, c: Circle) -> float: return 2 * math.pi * c.radius
+    def visit_rectangle(self, r: Rectangle) -> float: return 2 * (r.width + r.height)
+    def visit_triangle(self, t: Triangle) -> float:
+        hyp = math.sqrt(t.base**2 + t.height**2)
+        return t.base + t.height + hyp
 
 
-# Usage
 shapes: List[Shape] = [Circle(5), Rectangle(4, 6), Triangle(3, 4)]
 area_calc = AreaCalculator()
 perim_calc = PerimeterCalculator()
@@ -2153,6 +5086,168 @@ for shape in shapes:
     area = shape.accept(area_calc)
     perim = shape.accept(perim_calc)
     print(f"{name}: area={area:.2f}, perimeter={perim:.2f}")`,
+      java: `interface ShapeVisitor {
+    double visitCircle(Circle c);
+    double visitRectangle(Rectangle r);
+    double visitTriangle(Triangle t);
+}
+
+interface Shape { double accept(ShapeVisitor v); }
+
+class Circle implements Shape {
+    double radius;
+    Circle(double r) { radius = r; }
+    public double accept(ShapeVisitor v) { return v.visitCircle(this); }
+}
+
+class Rectangle implements Shape {
+    double width, height;
+    Rectangle(double w, double h) { width=w; height=h; }
+    public double accept(ShapeVisitor v) { return v.visitRectangle(this); }
+}
+
+class Triangle implements Shape {
+    double base, height;
+    Triangle(double b, double h) { base=b; height=h; }
+    public double accept(ShapeVisitor v) { return v.visitTriangle(this); }
+}
+
+class AreaCalculator implements ShapeVisitor {
+    public double visitCircle(Circle c) { return Math.PI * c.radius * c.radius; }
+    public double visitRectangle(Rectangle r) { return r.width * r.height; }
+    public double visitTriangle(Triangle t) { return 0.5 * t.base * t.height; }
+}
+
+class PerimeterCalculator implements ShapeVisitor {
+    public double visitCircle(Circle c) { return 2 * Math.PI * c.radius; }
+    public double visitRectangle(Rectangle r) { return 2 * (r.width + r.height); }
+    public double visitTriangle(Triangle t) {
+        return t.base + t.height + Math.sqrt(t.base*t.base + t.height*t.height);
+    }
+}
+
+class Main {
+    public static void main(String[] args) {
+        Shape[] shapes = { new Circle(5), new Rectangle(4, 6), new Triangle(3, 4) };
+        AreaCalculator area = new AreaCalculator();
+        PerimeterCalculator perim = new PerimeterCalculator();
+        for (Shape s : shapes) {
+            System.out.printf("%s: area=%.2f, perimeter=%.2f%n",
+                s.getClass().getSimpleName(), s.accept(area), s.accept(perim));
+        }
+    }
+}`,
+      cpp: `#include <iostream>
+#include <cmath>
+using namespace std;
+
+class Circle; class Rectangle; class Triangle;
+
+class ShapeVisitor {
+public:
+    virtual double visitCircle(const Circle& c) = 0;
+    virtual double visitRectangle(const Rectangle& r) = 0;
+    virtual double visitTriangle(const Triangle& t) = 0;
+    virtual ~ShapeVisitor() = default;
+};
+
+class Shape {
+public:
+    virtual double accept(ShapeVisitor& v) const = 0;
+    virtual ~Shape() = default;
+};
+
+class Circle : public Shape {
+public:
+    double radius;
+    Circle(double r) : radius(r) {}
+    double accept(ShapeVisitor& v) const override { return v.visitCircle(*this); }
+};
+
+class Rectangle : public Shape {
+public:
+    double width, height;
+    Rectangle(double w, double h) : width(w), height(h) {}
+    double accept(ShapeVisitor& v) const override { return v.visitRectangle(*this); }
+};
+
+class Triangle : public Shape {
+public:
+    double base, height;
+    Triangle(double b, double h) : base(b), height(h) {}
+    double accept(ShapeVisitor& v) const override { return v.visitTriangle(*this); }
+};
+
+class AreaCalculator : public ShapeVisitor {
+public:
+    double visitCircle(const Circle& c) override { return M_PI * c.radius * c.radius; }
+    double visitRectangle(const Rectangle& r) override { return r.width * r.height; }
+    double visitTriangle(const Triangle& t) override { return 0.5 * t.base * t.height; }
+};
+
+class PerimeterCalculator : public ShapeVisitor {
+public:
+    double visitCircle(const Circle& c) override { return 2 * M_PI * c.radius; }
+    double visitRectangle(const Rectangle& r) override { return 2 * (r.width + r.height); }
+    double visitTriangle(const Triangle& t) override {
+        return t.base + t.height + sqrt(t.base*t.base + t.height*t.height);
+    }
+};
+
+int main() {
+    Circle c(5); Rectangle r(4,6); Triangle t(3,4);
+    AreaCalculator area; PerimeterCalculator perim;
+    Shape* shapes[] = {&c, &r, &t};
+    for (auto* s : shapes) {
+        cout.precision(2); cout << fixed;
+        cout << "area=" << s->accept(area) << ", perimeter=" << s->accept(perim) << "\n";
+    }
+}`,
+      typescript: `interface ShapeVisitor {
+  visitCircle(c: Circle): number;
+  visitRectangle(r: Rectangle): number;
+  visitTriangle(t: Triangle): number;
+}
+
+interface Shape { accept(v: ShapeVisitor): number; }
+
+class Circle implements Shape {
+  constructor(public radius: number) {}
+  accept(v: ShapeVisitor): number { return v.visitCircle(this); }
+}
+
+class Rectangle implements Shape {
+  constructor(public width: number, public height: number) {}
+  accept(v: ShapeVisitor): number { return v.visitRectangle(this); }
+}
+
+class Triangle implements Shape {
+  constructor(public base: number, public height: number) {}
+  accept(v: ShapeVisitor): number { return v.visitTriangle(this); }
+}
+
+class AreaCalculator implements ShapeVisitor {
+  visitCircle(c: Circle): number { return Math.PI * c.radius ** 2; }
+  visitRectangle(r: Rectangle): number { return r.width * r.height; }
+  visitTriangle(t: Triangle): number { return 0.5 * t.base * t.height; }
+}
+
+class PerimeterCalculator implements ShapeVisitor {
+  visitCircle(c: Circle): number { return 2 * Math.PI * c.radius; }
+  visitRectangle(r: Rectangle): number { return 2 * (r.width + r.height); }
+  visitTriangle(t: Triangle): number {
+    return t.base + t.height + Math.sqrt(t.base ** 2 + t.height ** 2);
+  }
+}
+
+const shapes: Shape[] = [new Circle(5), new Rectangle(4, 6), new Triangle(3, 4)];
+const area = new AreaCalculator();
+const perim = new PerimeterCalculator();
+
+shapes.forEach(shape => {
+  console.log(\`\${shape.constructor.name}: area=\${shape.accept(area).toFixed(2)}, perimeter=\${shape.accept(perim).toFixed(2)}\`);
+});`,
+    },
   },
 ];
 

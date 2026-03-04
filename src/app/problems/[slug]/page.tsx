@@ -6,6 +6,7 @@ import CodeBlock from '@/components/CodeBlock';
 import ProgressTracker from '@/components/ProgressTracker';
 import { ArrowLeft, BookOpen, Code2, GitBranch, Layers, Tag, CheckCircle2 } from 'lucide-react';
 import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/site-config';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -21,9 +22,39 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const problem = getProblemBySlug(slug);
   if (!problem) return { title: 'Problem Not Found' };
+
+  const title = `${problem.title} — Low Level Design`;
+  const description = `${problem.description} | ${problem.difficulty} difficulty. Step-by-step solution with UML class diagram and code in Python, Java, C++, and TypeScript.`;
+  const ogImageUrl = `/api/og?title=${encodeURIComponent(problem.title)}&subtitle=${encodeURIComponent(problem.description)}&type=problem`;
+
   return {
-    title: problem.title,
-    description: problem.description,
+    title,
+    description,
+    keywords: [
+      problem.title,
+      'Low Level Design',
+      'LLD Interview',
+      problem.category,
+      ...problem.patterns,
+      ...problem.tags,
+      'System Design',
+      'OOP Design',
+    ],
+    alternates: { canonical: `${siteConfig.url}/problems/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `${siteConfig.url}/problems/${slug}`,
+      siteName: siteConfig.name,
+      type: 'article',
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: problem.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
@@ -48,11 +79,45 @@ export default async function ProblemDetailPage({ params }: PageProps) {
   const prevProblem = currentIndex > 0 ? problems[currentIndex - 1] : null;
   const nextProblem = currentIndex < problems.length - 1 ? problems[currentIndex + 1] : null;
 
-  const codeTabs = problem.pythonCode
-    ? [{ language: 'python', label: 'Python', code: problem.pythonCode }]
+  const codeTabs = problem.code
+    ? [
+        { language: 'python', label: 'Python', code: problem.code.python },
+        { language: 'java', label: 'Java', code: problem.code.java },
+        { language: 'cpp', label: 'C++', code: problem.code.cpp },
+        { language: 'typescript', label: 'TypeScript', code: problem.code.typescript },
+      ]
     : [];
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${siteConfig.url}/problems/${slug}`,
+        headline: problem.title,
+        description: problem.description,
+        author: { '@type': 'Organization', name: siteConfig.name },
+        publisher: { '@type': 'Organization', name: siteConfig.name },
+        url: `${siteConfig.url}/problems/${slug}`,
+        keywords: problem.tags.join(', '),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+          { '@type': 'ListItem', position: 2, name: 'Problems', item: `${siteConfig.url}/problems` },
+          { '@type': 'ListItem', position: 3, name: problem.title, item: `${siteConfig.url}/problems/${slug}` },
+        ],
+      },
+    ],
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Back button */}
       <div className="mb-6">
@@ -297,5 +362,6 @@ export default async function ProblemDetailPage({ params }: PageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

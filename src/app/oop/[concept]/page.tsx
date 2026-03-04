@@ -111,12 +111,16 @@ export default async function OOPConceptPage({ params }: PageProps) {
           <section>
             <div className="mb-4 flex items-center gap-2">
               <Code2 className="h-5 w-5 text-blue-400" />
-              <h2 className="text-xl font-semibold text-white">Python Code Example</h2>
+              <h2 className="text-xl font-semibold text-white">Code Example</h2>
             </div>
             <CodeBlock
-              code={concept.pythonCode}
-              language="python"
-              title={`${concept.title} - Python Example`}
+              tabs={[
+                { language: 'python', label: 'Python', code: concept.code.python },
+                { language: 'java', label: 'Java', code: concept.code.java },
+                { language: 'cpp', label: 'C++', code: concept.code.cpp },
+                { language: 'typescript', label: 'TypeScript', code: concept.code.typescript },
+              ]}
+              title={concept.title}
             />
           </section>
         </div>
