@@ -4,6 +4,8 @@ import { problems, getProblemBySlug } from '@/data/problems';
 import CodeBlock from '@/components/CodeBlock';
 import DiagramViewer from '@/components/DiagramViewer';
 import ProgressTracker from '@/components/ProgressTracker';
+import BookmarkButton from '@/components/BookmarkButton';
+import { getPatternSlug } from '@/lib/relations';
 import { ArrowLeft, BookOpen, Code2, GitBranch, Layers, Tag, CheckCircle2 } from 'lucide-react';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/lib/site-config';
@@ -251,10 +253,21 @@ export default async function ProblemDetailPage({ params }: PageProps) {
 
         {/* Sidebar */}
         <div className="space-y-5">
-          {/* Progress Tracker */}
+          {/* Progress + Bookmark */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
             <h3 className="mb-3 text-sm font-medium text-zinc-300">Track Progress</h3>
-            <ProgressTracker problemId={problem.id} problemTitle={problem.title} />
+            <div className="flex flex-wrap gap-2">
+              <ProgressTracker problemId={problem.id} problemTitle={problem.title} />
+              <BookmarkButton
+                item={{
+                  type: 'problem',
+                  id: problem.id,
+                  slug: problem.slug,
+                  title: problem.title,
+                  subtitle: problem.category,
+                }}
+              />
+            </div>
           </div>
 
           {/* Design Patterns */}
@@ -264,14 +277,25 @@ export default async function ProblemDetailPage({ params }: PageProps) {
               <h3 className="text-sm font-medium text-zinc-300">Design Patterns Used</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {problem.patterns.map((pattern) => (
-                <span
-                  key={pattern}
-                  className="rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-xs text-purple-400"
-                >
-                  {pattern}
-                </span>
-              ))}
+              {problem.patterns.map((pattern) => {
+                const patternSlug = getPatternSlug(pattern);
+                return patternSlug ? (
+                  <Link
+                    key={pattern}
+                    href={`/patterns/${patternSlug}`}
+                    className="rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-xs text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/40 transition-colors"
+                  >
+                    {pattern}
+                  </Link>
+                ) : (
+                  <span
+                    key={pattern}
+                    className="rounded-full bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-xs text-purple-400"
+                  >
+                    {pattern}
+                  </span>
+                );
+              })}
             </div>
           </div>
 

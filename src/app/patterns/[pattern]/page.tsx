@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { patterns, getPatternBySlug } from '@/data/patterns';
 import CodeBlock from '@/components/CodeBlock';
 import DecisionGuide from '@/components/DecisionGuide';
+import BookmarkButton from '@/components/BookmarkButton';
+import { getProblemsForPattern } from '@/lib/relations';
 import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Code2 } from 'lucide-react';
 import type { Metadata } from 'next';
 import { siteConfig } from '@/lib/site-config';
@@ -87,6 +89,9 @@ export default async function PatternDetailPage({ params }: PageProps) {
   const currentIndex = categoryPatterns.findIndex((p) => p.slug === slug);
   const prevPattern = currentIndex > 0 ? categoryPatterns[currentIndex - 1] : null;
   const nextPattern = currentIndex < categoryPatterns.length - 1 ? categoryPatterns[currentIndex + 1] : null;
+
+  // Get related problems
+  const relatedProblems = getProblemsForPattern(slug);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -214,6 +219,52 @@ export default async function PatternDetailPage({ params }: PageProps) {
 
         {/* Sidebar */}
         <div className="space-y-5">
+          {/* Bookmark */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+            <h3 className="mb-3 text-sm font-medium text-zinc-300">Save for Later</h3>
+            <BookmarkButton
+              item={{
+                type: 'pattern',
+                id: pattern.id,
+                slug: pattern.slug,
+                title: pattern.name,
+                subtitle: pattern.category,
+              }}
+            />
+          </div>
+
+          {/* Related Problems */}
+          {relatedProblems.length > 0 && (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Code2 className="h-4 w-4 text-blue-400" />
+                <h3 className="text-sm font-medium text-zinc-300">LLD Problems Using This Pattern</h3>
+              </div>
+              <div className="space-y-1.5">
+                {relatedProblems.map((problem) => {
+                  const diffColor =
+                    problem.difficulty === 'Easy'
+                      ? 'text-green-400'
+                      : problem.difficulty === 'Medium'
+                      ? 'text-yellow-400'
+                      : 'text-red-400';
+                  return (
+                    <Link
+                      key={problem.id}
+                      href={`/problems/${problem.slug}`}
+                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                    >
+                      <span className="truncate">{problem.title}</span>
+                      <span className={`shrink-0 ml-2 text-xs font-medium ${diffColor}`}>
+                        {problem.difficulty}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Use Cases */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
             <h3 className="mb-4 text-sm font-semibold text-zinc-200">Real-World Use Cases</h3>
