@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Code2, Layers, BookOpen, ArrowRight } from 'lucide-react';
+import { Search, X, Code2, Layers, BookOpen, Network, ArrowRight } from 'lucide-react';
 import { problems } from '@/data/problems';
 import { patterns } from '@/data/patterns';
 import { oopConcepts } from '@/data/oop';
+import { systemDesignTopics } from '@/data/systemDesign';
 
-type ResultType = 'problem' | 'pattern' | 'oop';
+type ResultType = 'problem' | 'pattern' | 'oop' | 'system-design';
 
 interface SearchResult {
   type: ResultType;
@@ -101,6 +102,26 @@ function search(query: string): SearchResult[] {
     });
   });
 
+  // Search system design topics
+  const matchedSystemDesign = systemDesignTopics.filter(
+    (t) =>
+      t.title.toLowerCase().includes(q) ||
+      t.summary.toLowerCase().includes(q) ||
+      t.category.toLowerCase().includes(q) ||
+      t.tags.some((tag) => tag.toLowerCase().includes(q))
+  );
+  matchedSystemDesign.slice(0, MAX_PER_SECTION).forEach((t) => {
+    results.push({
+      type: 'system-design',
+      id: t.id,
+      title: t.title,
+      subtitle: t.category,
+      href: `/system-design/${t.slug}`,
+      badge: t.type === 'fundamental' ? 'Fundamental' : t.difficulty,
+      badgeColor: 'text-cyan-400 bg-cyan-400/10',
+    });
+  });
+
   return results;
 }
 
@@ -108,6 +129,7 @@ const typeConfig: Record<ResultType, { icon: React.ElementType; color: string; l
   problem: { icon: Code2, color: 'text-blue-400', label: 'Problems' },
   pattern: { icon: Layers, color: 'text-purple-400', label: 'Patterns' },
   oop: { icon: BookOpen, color: 'text-orange-400', label: 'OOP Concepts' },
+  'system-design': { icon: Network, color: 'text-cyan-400', label: 'System Design' },
 };
 
 interface SearchModalProps {
@@ -176,7 +198,7 @@ export default function SearchModal({ open, onClose }: SearchModalProps) {
   // Flat index lookup
   const allResults = results;
 
-  const typeOrder: ResultType[] = ['problem', 'pattern', 'oop'];
+  const typeOrder: ResultType[] = ['system-design', 'problem', 'pattern', 'oop'];
 
   return (
     <div
@@ -199,7 +221,7 @@ export default function SearchModal({ open, onClose }: SearchModalProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search problems, patterns, OOP concepts..."
+            placeholder="Search system design, problems, patterns, OOP..."
             className="flex-1 bg-transparent text-base text-white placeholder-zinc-500 focus:outline-none"
           />
           {query && (

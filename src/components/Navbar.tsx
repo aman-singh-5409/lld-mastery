@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { BookOpen, Code2, Layers, Search, X, Menu, Bookmark } from 'lucide-react';
+import { BookOpen, Code2, Layers, Network, Search, X, Menu, Bookmark } from 'lucide-react';
 import SearchModal from './SearchModal';
 
 const navLinks = [
+  { href: '/system-design', label: 'System Design', icon: Network },
   { href: '/problems', label: 'Problems', icon: Code2 },
   { href: '/patterns', label: 'Patterns', icon: Layers },
   { href: '/oop', label: 'OOP Concepts', icon: BookOpen },

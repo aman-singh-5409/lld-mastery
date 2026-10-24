@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useBookmarks } from '@/components/BookmarkButton';
-import { Bookmark, Code2, Layers, Trash2, ArrowRight } from 'lucide-react';
+import { Bookmark, Code2, Layers, Network, Trash2, ArrowRight } from 'lucide-react';
 
 export default function BookmarksPage() {
   const { bookmarks, remove } = useBookmarks();
 
   const problems = bookmarks.filter((b) => b.type === 'problem');
   const patterns = bookmarks.filter((b) => b.type === 'pattern');
+  const systemDesign = bookmarks.filter((b) => b.type === 'system-design');
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -35,8 +36,14 @@ export default function BookmarksPage() {
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
+              href="/system-design"
+              className="flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-500"
+            >
+              Browse System Design <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
               href="/problems"
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
             >
               Browse Problems <ArrowRight className="h-4 w-4" />
             </Link>
@@ -48,6 +55,49 @@ export default function BookmarksPage() {
             </Link>
           </div>
         </div>
+      )}
+
+      {/* System Design Section */}
+      {systemDesign.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex items-center gap-2">
+            <Network className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-xl font-semibold text-white">System Design</h2>
+            <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-400">
+              {systemDesign.length}
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {systemDesign.map((item) => (
+              <div
+                key={item.id}
+                className="group flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4 transition-all hover:border-zinc-700"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10">
+                  <Network className="h-5 w-5 text-cyan-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/system-design/${item.slug}`}
+                    className="block truncate text-sm font-semibold text-white hover:text-cyan-400 transition-colors"
+                  >
+                    {item.title}
+                  </Link>
+                  {item.subtitle && (
+                    <p className="text-xs text-zinc-500">{item.subtitle}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => remove(item.id)}
+                  className="shrink-0 rounded-lg p-1.5 text-zinc-600 opacity-0 transition-all hover:bg-zinc-800 hover:text-red-400 group-hover:opacity-100"
+                  aria-label="Remove bookmark"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Problems Section */}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 
-export type BookmarkType = 'problem' | 'pattern';
+export type BookmarkType = 'problem' | 'pattern' | 'system-design';
 
 export interface BookmarkItem {
   type: BookmarkType;

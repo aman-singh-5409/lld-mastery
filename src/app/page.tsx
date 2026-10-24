@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { problems } from '@/data/problems';
 import { patterns } from '@/data/patterns';
 import { oopConcepts } from '@/data/oop';
-import { ArrowRight, BookOpen, Code2, Layers, Zap, Target, Trophy } from 'lucide-react';
+import { getFundamentals, getCaseStudies } from '@/data/systemDesign';
+import { ArrowRight, BookOpen, Code2, Layers, Network, Zap, Target, Trophy } from 'lucide-react';
 
 const difficultyCount = {
   Easy: problems.filter((p) => p.difficulty === 'Easy').length,
@@ -11,6 +12,9 @@ const difficultyCount = {
 };
 
 const featuredProblems = problems.slice(0, 4);
+const sdFundamentals = getFundamentals();
+const sdCaseStudies = getCaseStudies();
+const sdTotal = sdFundamentals.length + sdCaseStudies.length;
 
 export default function HomePage() {
   return (
@@ -19,7 +23,7 @@ export default function HomePage() {
       <section className="mb-16 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm text-blue-400">
           <Zap className="h-3.5 w-3.5" />
-          Master Low Level Design
+          Master System Design &amp; Low Level Design
         </div>
 
         <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -30,31 +34,33 @@ export default function HomePage() {
         </h1>
 
         <p className="mx-auto mb-8 max-w-2xl text-lg text-zinc-400 leading-relaxed">
-          Learn Low Level Design through hands-on problems, design patterns, and OOP concepts.
-          Build your skills from basics to complex systems with real code examples.
+          Learn System Design and Low Level Design through hands-on problems, real-world case
+          studies, design patterns, and OOP concepts. Build your skills from fundamentals to
+          complex distributed systems with real code and architecture walkthroughs.
         </p>
 
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            href="/problems"
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+            href="/system-design"
+            className="flex items-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-500"
           >
-            Start Practicing
+            Learn System Design
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
-            href="/patterns"
+            href="/problems"
             className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 px-6 py-3 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
           >
-            Explore Patterns
+            Start Practicing LLD
           </Link>
         </div>
       </section>
 
       {/* Stats */}
       <section className="mb-16">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           {[
+            { label: 'System Design Topics', value: sdTotal, icon: Network, color: 'text-cyan-400' },
             { label: 'LLD Problems', value: problems.length, icon: Code2, color: 'text-blue-400' },
             { label: 'Design Patterns', value: patterns.length, icon: Layers, color: 'text-purple-400' },
             { label: 'OOP Concepts', value: oopConcepts.length, icon: BookOpen, color: 'text-emerald-400' },
@@ -102,7 +108,34 @@ export default function HomePage() {
       {/* Feature Cards */}
       <section className="mb-16">
         <h2 className="mb-6 text-2xl font-bold text-white">What You Will Learn</h2>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {/* System Design */}
+          <div className="group rounded-xl border border-zinc-800 bg-zinc-900 p-6 transition-all hover:border-cyan-500/40">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10">
+              <Network className="h-6 w-6 text-cyan-400" />
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-white">System Design</h3>
+            <p className="mb-4 text-sm text-zinc-400 leading-relaxed">
+              {sdFundamentals.length} core fundamentals — scaling, caching, sharding, consistent
+              hashing, CAP theorem — plus {sdCaseStudies.length} full case studies like URL
+              shorteners and chat systems.
+            </p>
+            <div className="mb-4 flex gap-2 flex-wrap">
+              <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-xs text-cyan-400">
+                {sdFundamentals.length} Fundamentals
+              </span>
+              <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs text-blue-400">
+                {sdCaseStudies.length} Case Studies
+              </span>
+            </div>
+            <Link
+              href="/system-design"
+              className="flex items-center gap-1.5 text-sm font-medium text-cyan-400 hover:text-cyan-300"
+            >
+              Learn System Design <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
           {/* Problems */}
           <div className="group rounded-xl border border-zinc-800 bg-zinc-900 p-6 transition-all hover:border-blue-500/40">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
@@ -161,7 +194,7 @@ export default function HomePage() {
           </div>
 
           {/* OOP */}
-          <div className="group rounded-xl border border-zinc-800 bg-zinc-900 p-6 transition-all hover:border-emerald-500/40 sm:col-span-2 lg:col-span-1">
+          <div className="group rounded-xl border border-zinc-800 bg-zinc-900 p-6 transition-all hover:border-emerald-500/40">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
               <BookOpen className="h-6 w-6 text-emerald-400" />
             </div>
@@ -239,31 +272,39 @@ export default function HomePage() {
       <section className="mb-12">
         <div className="rounded-xl border border-zinc-800 bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-8 text-center">
           <Trophy className="mx-auto mb-4 h-10 w-10 text-yellow-400" />
-          <h2 className="mb-3 text-2xl font-bold text-white">Start Your LLD Journey</h2>
+          <h2 className="mb-3 text-2xl font-bold text-white">Start Your Design Journey</h2>
           <p className="mx-auto mb-6 max-w-lg text-zinc-400">
             Whether you are preparing for interviews or just want to become a better engineer,
-            mastering LLD is essential. Start with easy problems and work your way up.
+            mastering both System Design and LLD is essential. Follow this path from fundamentals
+            to fully solved problems.
           </p>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/system-design"
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
+            >
+              1. System Design Fundamentals
+            </Link>
+            <ArrowRight className="hidden h-4 w-4 text-zinc-500 sm:block" />
             <Link
               href="/oop"
               className="rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
             >
-              1. Learn OOP Basics
+              2. Learn OOP Basics
             </Link>
             <ArrowRight className="hidden h-4 w-4 text-zinc-500 sm:block" />
             <Link
               href="/patterns"
               className="rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
             >
-              2. Study Design Patterns
+              3. Study Design Patterns
             </Link>
             <ArrowRight className="hidden h-4 w-4 text-zinc-500 sm:block" />
             <Link
               href="/problems"
               className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500"
             >
-              3. Solve LLD Problems
+              4. Solve LLD Problems
             </Link>
           </div>
         </div>
